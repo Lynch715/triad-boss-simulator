@@ -718,3 +718,8 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .lvup-line{margin:8px 0;padding:6px 10px;border-left:3px solid var(--gold,#b08a3e);background:rgba(176,138,62,.08);font-weight:700}
 .hq-ring{fill:none;stroke:var(--seal);stroke-width:3.5;stroke-dasharray:5 3;pointer-events:none}
 .role-line h3 .lv-badge,.bcopy .lv-badge{color:var(--seal-ink);background:var(--ink);font-size:11px;font-weight:700}
+/* 技能说明 */
+.skill-list{list-style:none;margin:8px 0 6px;padding:0;display:grid;gap:5px}
+.skill-list li{display:flex;gap:6px;align-items:baseline;font-size:12px;line-height:1.45;color:var(--ink-2)}
+.skill-list li b.sk{flex:none;font-style:normal}
+.skill-list li span{min-width:0}
