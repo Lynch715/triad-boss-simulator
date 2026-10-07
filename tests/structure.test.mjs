@@ -44,9 +44,10 @@ assert.equal(game.checkInsolvency(debt),false,"同一场资金危机不能重复
 
 const overtime=game.createInitialState("沈加时","wei","standard");
 overtime.month=game.MAX_MONTHS-1;
-assert.equal(game.monthDisplay(overtime),`${game.MAX_MONTHS} / ${game.MAX_MONTHS}`);
-overtime.month=game.MAX_MONTHS;
-assert.equal(game.monthDisplay(overtime),"加时 1月");
+assert.equal(game.monthDisplay(overtime),`第${game.MAX_MONTHS}月`,"没有期限，只显示第几月");
+overtime.month=300;
+assert.equal(game.monthDisplay(overtime),"第301月");
+assert.equal(game.monthDisplay(overtime,true),"301月");
 
 const yeState=game.createInitialState("沈商路","li","standard");
 yeState.flags.yeUnlocked=true;
@@ -772,7 +773,7 @@ assert.equal(mig2.factions.east.ambition,0,"缺失的 ambition 补0");
 assert.equal(mig2.factions.wan.ambition,0,"非数字的 ambition 补0");
 assert.equal(mig2.factions.long.ambition,0,"负数 ambition 夹到0");
 assert.equal(mig2.territories.shipyard.settling,0,"缺失的 settling 补0");
-assert.equal(mig2.territories.golden_bay.settling,3,"超范围的 settling 夹到3");
+assert.equal(mig2.territories.golden_bay.settling,8,"超范围的 settling 夹到8（铺得最开时的上限）");
 
 // ---- 驻防期 ----
 const settleT=game.createInitialState("沈未稳","yi","standard");
@@ -1056,7 +1057,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   assert.equal(rout.endingReason,"crushed");
 }
 
-// ---- 加时的代价与最后一页 ----
+// ---- 第十年起风向变：没有期限，但越拖越难 ----
 {
   const s=game.createInitialState("沈加时","li","standard");
   s.month=game.MAX_MONTHS;assert.equal(game.eraTick(s),false,"主战役期内不收加时税");
@@ -1068,18 +1069,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   s.month=game.MAX_MONTHS+12;game.eraTick(s);
   assert.equal(s.eraDecay,0.903,"每六个月累乘一次");
   assert.equal(s.heatFloor,16);
-  // 96 月按局面结算三档
-  const bands=[[26,"halfharbor"],[15,"warlord"],[3,"faded"]];
-  for(const [n,reason] of bands){
-    const g=game.createInitialState("沈结算","yi","standard");g.month=game.FINAL_MONTH;
-    Object.values(g.territories).forEach(t=>t.owner="free");
-    Object.keys(g.territories).slice(0,n).forEach(id=>{g.territories[id].owner="player"});
-    assert.equal(game.ownTerritories(g).length,n);
-    assert.equal(game.forcedSettlement(g),true);
-    assert.equal(g.endingReason,reason,`${n} 块地应当结算为 ${reason}`);
-  }
-  const early=game.createInitialState("沈没到点","yi","standard");early.month=95;
-  assert.equal(game.forcedSettlement(early),false);
+  assert.equal(game.forcedSettlement,undefined,"不再有强制结算");
 }
 
 // ---- 必然终结：冻结局面不再存在 ----
@@ -1098,7 +1088,6 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
     if(sig===prev)frozen++;else frozen=0;prev=sig;
   }
   assert.ok(s.ended,`spec §1 的死局跑了 40 个月还没终结（现在第 ${s.month} 月）`);
-  assert.ok(s.month<=game.FINAL_MONTH,"最迟第96月强制结算");
   assert.ok(frozen<24,`地盘数连续 ${frozen} 个月纹丝不动，僵局哨兵报警`);
 }
 
@@ -1148,7 +1137,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 {
   const s2=game.createInitialState("沈文案","yi","standard");
   for(const a of game.ACTIONS){
-    for(const e of a.effects)assert.ok(e.length<=13,`行动「${a.name}」的效果标签「${e}」有 ${e.length} 字，超出卡片预算`);
+    for(const e of (typeof a.effects==="function"?a.effects(s2):a.effects))assert.ok(e.length<=13,`行动「${a.name}」的效果标签「${e}」有 ${e.length} 字，超出卡片预算`);
     const lt=typeof a.lockedText==="function"?a.lockedText(s2):a.lockedText;
     if(lt)assert.ok(lt.length<=14,`行动「${a.name}」的锁定文案「${lt}」有 ${lt.length} 字，按钮放不下`);
     assert.equal([...a.icon].length,1,`行动「${a.name}」的图标必须是单字`);

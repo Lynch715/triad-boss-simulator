@@ -163,4 +163,61 @@ const P=game.PEOPLE;
   assert.equal(nz.stats.force,game.CHARACTER_DEFS.zhaokui.stats.force+3,"折算等级不重复加属性");
 }
 
-console.log("scale / headquarters / officer level tests passed");
+// ---- 人从地盘来 ----
+{
+  const s=game.createInitialState("沈招人","yi","standard");
+  const base=game.recruitYield(s);
+  assert.equal(base,game.territoryRecruit(s,"old_street"),"开局只有老街出人");
+  s.territories.kowlooncity.owner="player";s.territories.kowlooncity.stability=75;s.territories.kowlooncity.settling=0;
+  const nb=game.territoryRecruit(s,"kowlooncity");
+  s.territories.kwuntong.owner="player";s.territories.kwuntong.stability=75;s.territories.kwuntong.settling=0;
+  assert.ok(nb>game.territoryRecruit(s,"kwuntong"),"街坊地段比物流地段出人多");
+  assert.equal(game.recruitYield(s),base+nb+game.territoryRecruit(s,"kwuntong"),"招人是各块地盘之和");
+  s.territories.kwuntong.settling=2;assert.equal(game.territoryRecruit(s,"kwuntong"),0,"未稳的地招不到人");
+  s.territories.kowlooncity.stability=20;assert.equal(game.territoryRecruit(s,"kowlooncity"),0,"人心散了招不到人");
+  s.cash=100;const c0=s.crew;game.applyAction(s,"recruit_crew",()=>.5);
+  assert.equal(s.crew-c0,Math.min(Math.round(game.recruitYield(s)*1.25),game.crewCap(s)-c0),"程野在：招到的人×1.25");
+  // 每月投奔
+  const f=game.createInitialState("沈投奔","yi","standard");f.crew=0;
+  assert.ok(game.monthlyInflow(f)>0,"立稳的地盘每月有人来投奔");
+  const g=game.createInitialState("沈满员","yi","standard");g.crew=game.crewCap(g);
+  assert.equal(game.monthlyInflow(g),0,"满员就不来了");
+}
+
+// ---- 留守与立稳 ----
+{
+  const s=game.createInitialState("沈留守","yi","standard");s.crew=3000;s.territories.clocktower.guard=50;
+  const rep=game.resolveBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui","chengye"],troops:1000,tactic:"assault"},seeded(9));
+  assert.equal(rep.outcome,"win");
+  const surv=rep.troops-rep.losses-(rep.bribed||0);
+  assert.equal(rep.garrison,Math.min(surv,Math.max(200,Math.round(surv*.6))),"幸存者六成留守，至少 200");
+  assert.equal(s.territories.clocktower.guard,rep.garrison);
+  assert.equal(s.regroup,surv-rep.garrison,"留守的人不回老街整补");
+  assert.equal(s.territories.clocktower.settling,4,"新地立稳要四个月");
+  // 未稳的地不能当跳板
+  const nb=game.TERRITORY_DEFS.clocktower.neighbors.filter(id=>!game.TERRITORY_DEFS.old_street.neighbors.includes(id)&&id!=="old_street"&&s.territories[id].owner!=="player");
+  assert.ok(nb.length>0);
+  assert.ok(nb.every(id=>!game.attackableTerritories(s).includes(id)),"钟楼还没立稳，不能从这里往外打");
+  s.territories.clocktower.settling=0;
+  assert.ok(nb.some(id=>game.attackableTerritories(s).includes(id)),"立稳了就能往外打");
+  // 铺得越开越难立稳
+  const w=game.createInitialState("沈铺开","yi","standard");w.crew=6000;
+  ["kowlooncity","west_market"].forEach(id=>{w.territories[id].owner="player";w.territories[id].settling=3});
+  w.territories.clocktower.guard=50;
+  game.resolveBattle(w,{targetId:"clocktower",leaderIds:["player","zhaokui","chengye"],troops:1000,tactic:"assault"},seeded(9));
+  assert.equal(w.territories.clocktower.settling,4+Math.round(2*1.25),"另有两块没稳：立稳期 +2.5 取整");
+  // 坐镇只缩短两个月
+  w.ap=3;w.territories.clocktower.settling=6;game.applyAction(w,"garrison",()=>.5);
+  assert.equal(w.territories.clocktower.settling,4,"坐镇新地盘：未稳期 −2 月");
+}
+
+// ---- 没有时间限制 ----
+{
+  assert.equal(game.FINAL_MONTH,undefined);assert.equal(game.forcedSettlement,undefined);
+  const s=game.createInitialState("沈不限时","yi","standard");s.month=200;s.ap=0;
+  game.advanceMonth(s,true,seeded(1));
+  assert.ok(!s.ended||!["halfharbor","warlord","faded"].includes(s.endingReason),"第 200 月也不会被强行结算");
+  assert.equal(game.monthDisplay(s),"第202月");
+}
+
+console.log("scale / headquarters / officer level / pacing tests passed");

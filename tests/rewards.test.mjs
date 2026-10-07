@@ -25,6 +25,7 @@ const beforeCash=battle.cash;
 const report=g.resolveBattle(battle,{targetId:'clocktower',leaderIds:['player','zhaokui','chengye'],troops:1000,tactic:'steady'},()=>.5);
 assert.ok(report.won);assert.deepEqual(report.honors,['油尖旺区']);
 assert.equal(report.cashGain,Math.round((battle.cash-beforeCash)*10)/10);
-assert.equal(report.survivors+report.losses,report.troops);
+assert.equal(report.survivors+report.garrison+report.losses,report.troops,'整补＋留守＋折损＝出战');
+assert.ok(report.garrison>0&&battle.territories.clocktower.guard===report.garrison,'留守的人就是新地盘的驻防');
 assert.equal(g.finishBattle(battle),null,'settled battle cannot pay twice');
 console.log('Victory report and one-time settlement passed');

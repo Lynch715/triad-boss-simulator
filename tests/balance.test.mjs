@@ -16,7 +16,7 @@ const game=require("../app.js");
 
 function seeded(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
 const TOTAL=Object.keys(game.TERRITORY_DEFS).length; // 14块地：一统需要13场胜仗
-const MONTH_CAP=game.FINAL_MONTH+1;                                  // 60 个月主战役 + 加时，超过即判定为打不完
+const MONTH_CAP=300;                                                  // 游戏本身没有期限；模拟跑到 300 月还没结局就算冻住
 const RUNS=24;
 const med=a=>a.length?a.slice().sort((x,y)=>x-y)[Math.floor(a.length/2)]:null;
 
@@ -39,8 +39,8 @@ function play(seed,difficulty,bar,useSupport,useSiege=false){
       game.applyAction(s,"train",rng)||
       game.applyAction(s,"business",rng)||(useSupport&&game.applyAction(s,"fortify",rng))));
     let fought=false;
-    if(s.ap>=1&&s.crew>=10){
-      const L=topLeaders(s),troops=Math.max(10,Math.round(s.crew*.9));
+    if(s.ap>=1&&s.crew>=game.MIN_TROOPS){
+      const L=topLeaders(s),troops=Math.max(game.MIN_TROOPS,Math.round(s.crew*.9));
       const eff=idle>=6?Math.max(1.05,bar-.3):idle>=3?Math.max(1.1,bar-.15):bar;   // 干等越久越肯冒险
       let best=null;
       for(const id of game.attackableTerritories(s)){
@@ -92,14 +92,14 @@ const steadyMonths=steady.filter(x=>x.unified).map(x=>x.months);
 
 // ① 行动点闸门：一统需 13 场仗（14 块地减去开局的老街），每场 1 行动点、每月 3 点，
 //    且出战会掏空能战人手 ⇒ 每月至多一场 ⇒ 最快第 12 月。这条精确锁死"血拼不消耗行动点"这个根因。
-assert.ok(Math.min(...rushMonths)>=12,`最快通关 ${Math.min(...rushMonths)} 月，行动点闸门失效`);
+assert.ok(Math.min(...rushMonths)>=80,`最快通关 ${Math.min(...rushMonths)} 月，太快了（要求 >=80）`);
 
 // ② 速通下界：莽夫是接近完美的打法，它都要 12 个月以上，说明滚雪球已经被掐住。
 //    实测中位 18~19 月（2026-08 难度上调后）；阈值留余量。
-assert.ok(med(rushMonths)>=16,`莽夫中位 ${med(rushMonths)} 月，滚雪球回来了（要求 >=16）`);
+assert.ok(med(rushMonths)>=85,`莽夫中位 ${med(rushMonths)} 月，滚雪球回来了（要求 >=85）`);
 
 // ③ 正常玩法要撑起战役体量。实测稳健派中位 52 月：主战役刚好打满，常要进加时。
-assert.ok(med(steadyMonths)>=40,`稳健中位 ${med(steadyMonths)} 月，战役太短（要求 >=40）`);
+assert.ok(med(steadyMonths)>=110,`稳健中位 ${med(steadyMonths)} 月，战役太短（要求 >=110）`);
 
 // ④ 但不能矫枉过正变成打不完。稳健派至少要有一半能赢（2026-08 难度上调后实测 54%~70%）。
 assert.ok(steady.filter(x=>x.unified).length>=RUNS*.5,`稳健只有 ${steady.filter(x=>x.unified).length}/${RUNS} 通关，难到不可玩`);
@@ -121,12 +121,10 @@ console.log("balance tests passed");
 // 加这一组之前，稳健画像有 5/24 局跑到 120 个月仍未终结：敌方驻防 300+ 对玩家攻击天花板 ~250，
 // 双方互相打不动，现金堆到几千万无处可花。下面三条锁住的就是「这种局面不再出现」。
 
-// ⑧ 必然终结：任何一局都要在第 100 月前抵达某个结局（FINAL_MONTH=96 兜底）。
+// ⑧ 必然终结：没有时间限制，但任何一局都要在 300 月内分出结局（一统、失守或破产）。
 for(const [name,set] of [["稳健",steady],["稳健·围困",besieger],["莽夫",rush],["莽夫·死战",rushBrutal]]){
   const stuck=set.filter(r=>!r.ended&&!r.unified);
   assert.equal(stuck.length,0,`${name} 有 ${stuck.length} 局跑到 ${MONTH_CAP} 月仍未终结，后期又冻住了`);
-  const late=set.filter(r=>r.months>game.FINAL_MONTH);
-  assert.equal(late.length,0,`${name} 有 ${late.length} 局拖过 100 月，强制结算没生效`);
 }
 
 // ⑨ 僵局哨兵：地盘数连续 24 个月完全不变即判定为冻结。
@@ -138,7 +136,8 @@ for(const [name,set] of [["稳健",steady],["稳健·围困",besieger],["莽夫�
 
 // ⑩ 破局工具是通路不是送分：稳健派通关率仍要落在一个像样的区间里。
 const steadyWin=steady.filter(x=>x.unified).length,siegeWin=besieger.filter(x=>x.unified).length;
-assert.ok(steadyWin>=RUNS*.4&&steadyWin<=RUNS*.92,`稳健通关 ${steadyWin}/${RUNS}，超出可玩区间`);
+// 没有期限之后，稳健派慢慢磨总能赢；难度改由通关月数（③）来锁，这里只管下限。
+assert.ok(steadyWin>=RUNS*.4,`稳健通关 ${steadyWin}/${RUNS}，难到不可玩`);
 assert.ok(siegeWin>=RUNS*.3,`会用围困的稳健派只通关 ${siegeWin}/${RUNS}，破局工具反而是负收益`);
 
 console.log(`必然终结：全部 ${RUNS*4} 局均在 ${Math.max(...[...steady,...besieger,...rush,...rushBrutal].map(r=>r.months))} 月内结束`);
