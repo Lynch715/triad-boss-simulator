@@ -3,42 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#090d0e">
+  <meta name="theme-color" content="#17110c">
   <meta name="description" content="接班父亲的和联胜，招人、血拼、吞并势力，一统架空港城雾港。">
   <title>模拟社团老大 · 雾港风云</title>
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
-  <div class="rain" aria-hidden="true"></div>
-
+  
   <section id="menu" class="screen menu-screen">
     <div class="menu-portrait">
       <img src="assets/player.webp" alt="和联胜新任老大">
-      <div class="portrait-fade"></div>
-      <span class="vertical-seal">雾港<br>和联胜</span>
+      <span class="photo-caption">话事人</span>
     </div>
-    <div class="menu-card glass">
-      <span class="eyebrow">HARBOR / 001</span>
-      <h1>模拟社团老大</h1>
-      <p class="subtitle">父亲留下的不是王座，是一条老街、三名旧部，和一本没还完的账。</p>
-      <div class="title-rule"><i></i><b>雾港风云</b><i></i></div>
-      <button id="continueBtn" class="primary-btn hidden" type="button"></button>
-      <button id="newGameBtn" class="secondary-btn" type="button">新开一局</button>
-      <button id="leaderboardBtn" class="secondary-btn" type="button">雾港名录 · 排行榜</button>
-      <p class="fine-print">架空剧情策略游戏 · 本地存档 · 无数据上传</p>
+    <div class="menu-card">
+      <div class="cover">
+        <span class="cover-seal">和联<br>胜记</span>
+        <span class="eyebrow">雾港 · 旧账一册</span>
+        <h1>模拟社团老大</h1>
+        <p class="subtitle">父亲留下的不是王座，是一条老街、三名旧部，和一本没还完的账。</p>
+        <div class="title-rule"><i></i><b>雾港风云</b><i></i></div>
+        <button id="continueBtn" class="primary-btn hidden" type="button"></button>
+        <button id="newGameBtn" class="secondary-btn" type="button">新开一局</button>
+        <button id="leaderboardBtn" class="secondary-btn" type="button">雾港名录 · 排行榜</button>
+        <p class="fine-print">架空剧情策略游戏 · 本地存档 · 无数据上传</p>
+      </div>
     </div>
   </section>
 
   <section id="creator" class="screen creator-screen hidden">
-    <div class="creator-art">
-      <img src="assets/father.webp" alt="沈振海">
-      <div class="portrait-fade"></div>
-      <div class="creator-quote">
-        <span>沈振海</span>
+    <div class="creator-side">
+      <div class="creator-art">
+        <img src="assets/father.webp" alt="沈振海">
+        <span class="photo-caption">沈振海</span>
+      </div>
+      <div class="quote-note">
+        <span>父亲的话</span>
         <p>“人家敬的是我打下来的东西。你要他们敬你，就自己去拿。”</p>
       </div>
     </div>
-    <div class="creator-card glass">
+    <div class="creator-card">
       <span class="eyebrow">第一章 · 接印</span>
       <h2>今晚过后，你代表和联胜</h2>
 
@@ -77,16 +80,15 @@
         <button id="rerollMutatorsBtn" class="secondary-btn reroll-btn" type="button">换一个年景</button>
       </div>
 
-      <button id="startGameBtn" class="primary-btn" type="button">接过龙头印 <span>→</span></button>
+      <button id="startGameBtn" class="primary-btn" type="button">接过龙头印</button>
     </div>
   </section>
 
   <section id="prologue" class="screen story-screen hidden" aria-live="polite">
     <div class="story-portrait">
       <img id="prologuePortrait" src="assets/father.webp" alt="剧情人物">
-      <div class="portrait-fade"></div>
     </div>
-    <div class="story-card glass">
+    <div class="story-card">
       <span id="prologueKicker" class="eyebrow">序章</span>
       <h2 id="prologueTitle"></h2>
       <div id="prologueBody" class="story-body"></div>
@@ -103,27 +105,29 @@
       </div>
       <div class="top-resources">
         <div><span>月份</span><b id="monthText">1 / 120</b></div>
-        <div><span>行动点</span><b id="apText">3 / 3</b></div>
+        <div class="ap-cell"><span>行动点</span><b><span id="apText" class="ap-num">3 / 3</span><i id="apDots" class="ap-dots" aria-hidden="true"></i></b></div>
         <div><span>现金</span><b id="cashText">36万</b></div>
-        <div><span>能战人手</span><b id="crewText">42</b><small id="crewBreakdown" class="crew-breakdown"></small></div>
-        <button id="saveBtn" class="icon-btn" type="button" aria-label="保存进度">存</button>
-        <button id="restartBtn" class="icon-btn" type="button" aria-label="重新开始">重</button>
+        <div><span>能战人手</span><b><span id="crewText">42</span><small id="crewBreakdown" class="crew-breakdown"></small></b></div>
+        <div class="top-tools">
+          <button id="saveBtn" class="icon-btn" type="button" aria-label="保存进度">存档</button>
+          <button id="restartBtn" class="icon-btn" type="button" aria-label="重新开始">重开</button>
+        </div>
       </div>
     </header>
 
+    <button id="mobileStatus" class="mobile-status" type="button" aria-controls="sideColumn" aria-expanded="false"></button>
     <main class="dashboard">
-      <aside class="side-column">
+      <aside id="sideColumn" class="side-column">
         <article class="boss-card">
           <img src="assets/player.webp" alt="玩家立绘">
-          <div class="portrait-fade"></div>
           <div class="boss-copy">
             <span id="creedBadge">义字当头</span>
             <h2 id="playerNameText">沈川</h2>
-            <p>和联胜 · 话事人</p>
+            <p>话事人</p>
           </div>
         </article>
 
-        <section class="side-panel glass">
+        <section class="side-panel">
           <div class="section-title"><h3>势力根基</h3><span id="territoryCount">1 / 36</span></div>
           <div class="meter-row"><span>士气</span><b id="moraleText">62</b></div><div class="meter"><i id="moraleBar"></i></div>
           <div class="meter-row"><span>声望</span><b id="repText">18</b></div><div class="meter gold"><i id="repBar"></i></div>
@@ -131,28 +135,30 @@
           <div class="meter-row"><span>外部压力</span><b id="heatText">8</b></div><div class="meter red"><i id="heatBar"></i></div>
         </section>
 
-        <section class="side-panel glass">
+        <section class="side-panel">
           <div class="section-title"><h3>本月收支</h3><span id="netIncomeText">+0万</span></div>
           <div id="incomeBreakdown" class="income-list"></div>
         </section>
       </aside>
 
       <section class="main-column">
+       <div class="ledger">
         <nav id="gameNav" class="game-nav" aria-label="游戏功能">
-          <button class="active" data-tab="hall"><span>堂</span>议事堂</button>
-          <button data-tab="recruit"><span>人</span>招募</button>
-          <button data-tab="map"><span>地</span>地盘</button>
-          <button data-tab="battle"><span>战</span>血拼</button>
-          <button data-tab="roster"><span>将</span>名册</button>
-          <button data-tab="chronicle"><span>录</span>江湖录</button>
+          <button class="active" data-tab="hall" type="button"><span>堂</span>议事堂</button>
+          <button data-tab="recruit" type="button"><span>人</span>招募</button>
+          <button data-tab="map" type="button"><span>地</span>地盘</button>
+          <button data-tab="battle" type="button"><span>战</span>血拼</button>
+          <button data-tab="roster" type="button"><span>将</span>名册</button>
+          <button data-tab="chronicle" type="button"><span>录</span>江湖录</button>
         </nav>
 
         <div class="turn-strip">
           <div><i class="live-dot"></i><b id="phaseText">守住父业</b><span id="turnHint">每月3个行动点</span></div>
-          <button id="endMonthBtn" class="end-month-btn" type="button">结束本月</button>
+          <button id="endMonthBtn" class="end-month-btn" type="button">合账 · 结束本月</button>
         </div>
 
         <div id="panel" class="content-panel"></div>
+       </div>
       </section>
     </main>
   </div>
@@ -170,11 +176,11 @@
   </div>
 
   <section id="ending" class="screen ending-screen hidden">
-    <div class="ending-portrait"><img src="assets/player.webp" alt="雾港结局"><div class="portrait-fade"></div></div>
-    <div id="endingBody" class="ending-card glass"></div>
+    <div class="ending-portrait"><img src="assets/player.webp" alt="雾港结局"></div>
+    <div id="endingBody" class="ending-card"></div>
   </section>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

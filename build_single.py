@@ -52,7 +52,7 @@ def main() -> None:
         lambda _: f"<style>\n{css}\n</style>",
         html,
     )
-    html = html.replace('<script src="app.js?v=7"></script>', f"{loader}\n<script>\n{js}\n</script>")
+    html = html.replace('<script src="app.js?v=8"></script>', f"{loader}\n<script>\n{js}\n</script>")
 
     # 只看属性，别看正文：注释里提到文件名不算外部依赖。
     external = sorted(set(re.findall(r'(?:href|src)="[^"]*\.(?:css|js)(?:\?[^"]*)?"', html)))
