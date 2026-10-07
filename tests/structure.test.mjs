@@ -146,7 +146,11 @@ const advRatio=advSess.ratio,crewBefore=adv.crew;
 const r1=game.applyStageChoice(adv,"hold",()=>.5);      // rng=.5 -> u=1.0
 assert.equal(r1.ended,false);
 assert.equal(adv.battleSession.stage,2,"打完一段进入第2段");
-assert.equal(adv.battleSession.momentum,Math.round((advRatio-1)*33.3*10)/10,"势必须等于闭式解，不能只断言变了");
+// 卡牌对战：势＝(我方剩余战力比例−对方剩余战力比例)×100，必须能从单位状态复算出来。
+{const u=adv.battleSession.units,frac=side=>u.filter(x=>x.side===side).reduce((a,x)=>a+Math.max(0,x.str),0)/u.filter(x=>x.side===side).reduce((a,x)=>a+x.max,0);
+ assert.equal(adv.battleSession.momentum,Math.round((frac("us")-frac("them"))*1000)/10,"势必须能从单位战力复算");
+ assert.ok(u.some(x=>x.side==="us")&&u.some(x=>x.side==="them"),"两边都要有上阵单位");
+ assert.equal(adv.battleSession.events.length>0,true,"每段要留下可回放的事件");}
 assert.equal(adv.crew,crewBefore,"段内不再动人手池：人在开战时就离开了，伤亡只记在 session 上");
 assert.equal(adv.casualties,adv.battleSession.losses,"累计伤亡同步");
 assert.ok(adv.battleSession.enemyLoss>0,"敌方也要掉人");
@@ -159,7 +163,7 @@ fresh.crew=120;
 game.startBattle(fresh,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
 assert.equal(fresh.battleSession.stage,1);
 assert.throws(()=>game.applyStageChoice(fresh,"withdraw",()=>.5),/invalid option/,"第1段不得撤退");
-assert.equal(fresh.crew,60,"被拒的撤退不得再额外扣人");
+assert.equal(fresh.crew,120-fresh.battleSession.troops,"被拒的撤退不得再额外扣人（出战人数按头目能带的上限封顶）");
 // 非法选项不得留下任何副作用
 const stageOneStage=adv.battleSession.stage;
 const crewAfterThrow=adv.crew;
@@ -182,7 +186,7 @@ const badSess=game.startBattle(bad,{targetId:"south_dock",leaderIds:["player"],t
 assert.ok(badSess.ratio<1,"这一局必须真的是劣势，否则下面的断言没有意义");
 game.applyStageChoice(bad,"hold",()=>0);
 assert.ok(bad.battleSession.momentum<0,"u=0.705 且 ratio<1 应打出负势");
-assert.ok(bad.battleSession.log[0].text.includes("对面顶住了"),"劣势段要走另一套文案");
+assert.ok(bad.battleSession.log[0].text.includes("本段我方折损"),"每段战报要写明双方折损");
 // 会话结束后不得再推进
 const done=game.createInitialState("沈越界","yi","standard");
 done.crew=120;
@@ -200,7 +204,7 @@ assert.equal(fr.outcome,"win");
 assert.equal(fin.territories.south_dock.owner,"player");
 assert.equal(fin.battleSession,null,"结算后必须清空会话");
 assert.equal(fin.winStreak,1,"胜场连胜计数");
-assert.equal(fr.stages.length,3,"三段战报来自真实判定");
+assert.ok(fr.stages.length>=1&&fr.stages.length<=3,"战报按实际打了几段来写：守军提前打散就提前收场");
 assert.equal(fin.lastBattle,fr);
 
 // 平衡回归：势必须真的响应兵力差。
@@ -332,9 +336,9 @@ prop.crew=200;
 game.startBattle(prop,{targetId:"south_dock",leaderIds:["player","sumanqing","chengye"],troops:100,tactic:"steady"});
 const ps=prop.battleSession;
 assert.ok(game.stageOptions(prop,ps).some(o=>o.id==="flank"),"苏曼青谋略88应给出侧翼提议");
-assert.ok(!game.stageOptions(prop,ps).some(o=>o.id==="parley"),"势≤20 时不给劝降");
+assert.ok(!game.stageOptions(prop,ps).some(o=>o.id==="parley"),"势≤10 时不给劝降");
 ps.momentum=25;
-assert.ok(game.stageOptions(prop,ps).some(o=>o.id==="parley"),"势>20 才解锁劝降");
+assert.ok(game.stageOptions(prop,ps).some(o=>o.id==="parley"),"势>10 才解锁劝降");
 assert.ok(game.stageOptions(prop,ps).length<=5,"选项上限5");
 assert.ok(game.stageOptions(prop,ps).some(o=>o.id==="hold"),"稳住必须恒在");
 // 提议效果必须按属性缩放，不是固定值
@@ -355,12 +359,12 @@ assert.ok(spy.battleSession.log[0].text.includes("魏小楼"),"揭穿要写进�
 assert.ok(!game.stageOptions(spy,spy.battleSession).some(o=>o.id==="backdoor"),"情报已知后不再重复提议");
 // 劝降真的会把敌兵变成自己人。用 guard=70 让 enemyLoss 足够大，转化量才可观。
 const talk=game.createInitialState("沈劝降","yi","standard");
-talk.crew=300;talk.morale=95;talk.territories.south_dock.guard=70;
+talk.crew=300;talk.morale=95;talk.territories.south_dock.guard=25;   // 出战人数按头目带兵上限封顶到90，守军要相应减少才打得出优势
 const tr=()=>.99;
 game.startBattle(talk,{targetId:"south_dock",leaderIds:["player","chengye"],troops:200,tactic:"steady"},tr);
 game.applyStageChoice(talk,"hold",tr);
 game.applyStageChoice(talk,"hold",tr);
-assert.ok(talk.battleSession.momentum>20,"这局必须打出优势，否则劝降不会出现");
+assert.ok(talk.battleSession.momentum>10,"这局必须打出优势，否则劝降不会出现");
 assert.ok(game.stageOptions(talk,talk.battleSession).some(o=>o.id==="parley"));
 const parleyRate=game.stageOptions(talk,talk.battleSession).find(o=>o.id==="parley").convert;
 const crewBeforeStage3=talk.crew;
@@ -372,7 +376,7 @@ assert.equal(talk.crew,crewBeforeStage3+gain,"劝降转化的人直接进能战�
 assert.ok(talk.log.some(l=>l.text.includes("程野把")),"转化要留下江湖记事");
 // 对照组：同样局势下选 hold 则不该有任何转化
 const noTalk=game.createInitialState("沈不劝","yi","standard");
-noTalk.crew=300;noTalk.morale=95;noTalk.territories.south_dock.guard=70;
+noTalk.crew=300;noTalk.morale=95;noTalk.territories.south_dock.guard=25;
 const nr=()=>.99;
 game.startBattle(noTalk,{targetId:"south_dock",leaderIds:["player","chengye"],troops:200,tactic:"steady"},nr);
 game.applyStageChoice(noTalk,"hold",nr);
@@ -447,7 +451,7 @@ timing.crew=400;
 const tSess=game.startBattle(timing,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:200,tactic:"assault"});
 const tRatio=tSess.ratio;
 game.applyStageChoice(timing,"duel",()=>.01);
-assert.equal(timing.battleSession.momentum,Math.round((tRatio*(1-.295+.01*.59)*1*1-1)*33.3*10)/10,"本段的势必须按 multRest=1 结算");
+assert.ok(Number.isFinite(timing.battleSession.momentum)&&timing.battleSession.mods.multRest===1.25,"单挑赢下后只抬高后续段");
 // 阿七断后会提高他自己的受伤概率
 const risky=joinNamed(game.createInitialState("沈断后险","yi","standard"),"aqi");
 risky.crew=200;
@@ -469,32 +473,15 @@ assert.deepEqual(rep.lastBattle.injured,["韩彪"],"单挑负伤的头目要进�
 
 // 沈川「沈家之后」：士气下限45，低士气时伤亡不再随士气恶化。
 // 用同一套阵容与同一 rng，只切 mods.moraleFloor，才能把变量隔离干净。
-function floorLoss(floorOn){
+function floorPower(morale,withPlayer){
   const a=game.createInitialState("沈低迷","yi","standard");
-  a.crew=900;a.morale=10;
-  game.startBattle(a,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:800,tactic:"steady"});
-  if(!floorOn)a.battleSession.mods.moraleFloor=0;
-  game.applyStageChoice(a,"hold",()=>.5);
-  return a.battleSession.losses;
-}
-assert.equal(floorLoss(true),24,"士气10但有沈川：按士气45计伤亡");
-assert.equal(floorLoss(false),29,"同局无下限：按士气10计伤亡，明显更惨");
-// 士气高于下限时该被动不应有任何影响
-function floorAt(morale){
-  const a=game.createInitialState("沈高昂","yi","standard");
   a.crew=900;a.morale=morale;
-  game.startBattle(a,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:800,tactic:"steady"});
-  const withFloor=a.battleSession.mods.moraleFloor;
-  a.battleSession.mods.moraleFloor=0;
-  game.applyStageChoice(a,"hold",()=>.5);
-  const off=a.battleSession.losses;
-  const b=game.createInitialState("沈高昂2","yi","standard");
-  b.crew=900;b.morale=morale;
-  game.startBattle(b,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:800,tactic:"steady"});
-  game.applyStageChoice(b,"hold",()=>.5);
-  return[b.battleSession.losses,off,withFloor];
+  return game.startBattle(a,{targetId:"south_dock",leaderIds:withPlayer?["player","zhaokui"]:["zhaokui","sumanqing"],troops:80,tactic:"steady"}).power;
 }
-const[onHi,offHi]=floorAt(62);
+{const base=game.createInitialState("沈对照","yi","standard");base.crew=900;base.morale=45;
+ assert.equal(floorPower(10,true),game.startBattle(base,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:80,tactic:"steady"}).power,"士气10但有沈川：开战战力按士气45算");}
+assert.ok(floorPower(10,false)<floorPower(45,false),"没有沈川：低士气真的会削弱战力");
+const onHi=floorPower(62,true),offHi=game.startBattle(Object.assign(game.createInitialState("沈高昂","yi","standard"),{crew:900,morale:62}),{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:80,tactic:"steady"}).power;
 assert.equal(onHi,offHi,"士气62高于下限45，沈川被动不该改变任何结果");
 
 // 唐霁「唯能者居」：胜利时全员功劳 ×1.5
@@ -591,7 +578,7 @@ assert.ok(!game.stageOptions(normal,normal.battleSession).some(o=>o.id==="duel")
 // 劝降拿下的地盘不服管：稳定度比强攻拿下低 10
 function parleyStability(useParley){
   const s=game.createInitialState("沈收编","yi","standard");
-  s.crew=400;s.morale=95;s.territories.south_dock.guard=70;
+  s.crew=400;s.morale=95;s.territories.south_dock.guard=25;
   const rng=()=>.99;
   game.startBattle(s,{targetId:"south_dock",leaderIds:["player","chengye"],troops:200,tactic:"steady"},rng);
   game.applyStageChoice(s,"hold",rng);game.applyStageChoice(s,"hold",rng);
@@ -606,7 +593,7 @@ assert.equal(parleyStability(true),52,"劝降拿下：收编来的人压不住�
 // 出战的人在 startBattle 离池，finishBattle 必须把他们分成幸存(整补)/重伤(养伤)/阵亡(消失)三份。
 const settle=game.createInitialState("沈结算","yi","standard");
 settle.crew=120;
-game.resolveBattle(settle,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"},seeded(7));
+game.resolveBattle(settle,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:60,tactic:"steady"},seeded(7));   // 两人带兵上限 94，60 人全部上阵
 const settleRep=settle.lastBattle;
 const settleWounded=Math.round(settleRep.losses*.55);
 assert.ok(settleRep.losses>0,"这场仗必须真的死人，否则断言无意义");
@@ -730,7 +717,7 @@ assert.equal(cleaned.wounded,0);
 // 中断的战斗：出战的人已经离池，丢弃会话时必须还回整补池，否则凭空蒸发
 const aborted=game.createInitialState("沈中断","yi","standard");
 aborted.crew=200;
-game.startBattle(aborted,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
+game.startBattle(aborted,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:60,tactic:"steady"});
 assert.equal(aborted.crew,140);
 aborted.battleSession.stage=99;                                    // 制造一个 validBattleSession 会拒绝的会话
 const rescued=game.normalizeState(JSON.parse(JSON.stringify(aborted)));
