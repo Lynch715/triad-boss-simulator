@@ -723,3 +723,13 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
 .skill-list li{display:flex;gap:6px;align-items:baseline;font-size:12px;line-height:1.45;color:var(--ink-2)}
 .skill-list li b.sk{flex:none;font-style:normal}
 .skill-list li span{min-width:0}
+/* 名册按堂口折叠 */
+.roster-group{margin:18px 0 0;border-top:1px solid var(--rule)}
+.roster-group>summary{display:flex;align-items:center;gap:10px;padding:12px 2px;cursor:pointer;list-style:none;font-family:var(--serif)}
+.roster-group>summary::-webkit-details-marker{display:none}
+.roster-group>summary::before{content:"▸";color:var(--ink-3);transition:transform .15s}
+.roster-group[open]>summary::before{transform:rotate(90deg)}
+.roster-group>summary b{font-size:17px;letter-spacing:.08em;color:var(--ink)}
+.roster-group>summary span{font-size:12px;color:var(--ink-3)}
+.roster-group>summary .owner-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.roster-group .officer-grid{padding-bottom:6px}

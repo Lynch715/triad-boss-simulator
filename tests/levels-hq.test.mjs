@@ -56,7 +56,9 @@ const P=game.PEOPLE;
   assert.equal(game.hqLocked(s,"south_dock"),false,"东潮会只剩两块外围，堂口可以打了");
   // 守方：本家能打的头目全上，受伤 −15%（折成战力 ÷0.85）
   const lineup=game.enemyLineup(s,"south_dock",null).filter(u=>u.id);
-  assert.deepEqual(lineup.map(u=>u.id).sort(),["hewanshan","tangji"],"东潮会两名头目都守堂口");
+  assert.equal(lineup.length,3,"堂口三路都是有名有姓的头目");assert.ok(["hewanshan","tangji"].every(id=>lineup.some(u=>u.id===id)),"何万山、唐霁都在");
+  assert.equal(game.enemyLineup(s,"tko",null).filter(u=>u.id).length,2,"普通地盘只派两名头目");
+  s.officers.filter(o=>o.side==="east"&&!o.named).forEach(o=>{o.injured=2});   // 只留两名名将，好和普通地盘逐项对比
   const dp=game.defenderPower(s,"south_dock").power;
   s.territories.south_dock.owner="wan";                 // 被别家占了就只是一块普通地
   assert.equal(game.isHomeHQ(s,"south_dock"),false);
@@ -161,6 +163,17 @@ const P=game.PEOPLE;
   assert.equal(nz.exp,undefined,"旧字段删掉");
   assert.equal(nz.lv,4,"(3×10+6)×4=144 经验 → Lv4");
   assert.equal(nz.stats.force,game.CHARACTER_DEFS.zhaokui.stats.force+3,"折算等级不重复加属性");
+}
+
+// ---- 三家的二线头目 ----
+{
+  const s=game.createInitialState("沈名册","yi","standard");
+  for(const f of ["east","wan","long"])assert.equal(s.officers.filter(o=>o.side===f).length,5,`${f} 五名头目`);
+  const old=JSON.parse(JSON.stringify(s));old.officers=old.officers.filter(o=>!o.id.includes("_"));old.factions.long.defeated=true;
+  const n=game.normalizeState(old);
+  assert.equal(n.officers.filter(o=>o.side==="east").length,5,"旧档补上二线头目");
+  assert.equal(n.officers.filter(o=>o.side==="long").length,2,"已经灭掉的社团不补");
+  const e=n.officers.find(o=>o.id==="east_li");assert.equal(e.portrait,"");assert.equal(game.officerSkills(n,e).length,1);
 }
 
 // ---- 人从地盘来 ----
