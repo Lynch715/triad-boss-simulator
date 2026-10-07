@@ -20,9 +20,9 @@ s.territories.clocktower.owner='free';g.districtHonors(s);s.territories.clocktow
 const restored=g.normalizeState(JSON.parse(JSON.stringify(s)));assert.deepEqual(g.districtHonors(restored),[],'reload cannot farm district gifts');
 assert.equal(restored.territories.old_street.earned,s.territories.old_street.earned);
 console.log('Business forecasts, opening, earnings, payback and district rewards passed');
-const battle=g.createInitialState('战果','yi','standard');battle.crew=150;battle.territories.clocktower.guard=1;
+const battle=g.createInitialState('战果','yi','standard');battle.crew=1500;battle.territories.clocktower.guard=10;
 const beforeCash=battle.cash;
-const report=g.resolveBattle(battle,{targetId:'clocktower',leaderIds:['player','zhaokui','chengye'],troops:100,tactic:'steady'},()=>.5);
+const report=g.resolveBattle(battle,{targetId:'clocktower',leaderIds:['player','zhaokui','chengye'],troops:1000,tactic:'steady'},()=>.5);
 assert.ok(report.won);assert.deepEqual(report.honors,['油尖旺区']);
 assert.equal(report.cashGain,Math.round((battle.cash-beforeCash)*10)/10);
 assert.equal(report.survivors+report.losses,report.troops);

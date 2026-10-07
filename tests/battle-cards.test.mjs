@@ -5,15 +5,15 @@ import {createRequire} from "node:module";
 const require=createRequire(import.meta.url);
 const game=require("../app.js");
 function seeded(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
-const fresh=(name="沈卡牌")=>{const s=game.createInitialState(name,"yi","standard");s.crew=120;return s};
+const fresh=(name="沈卡牌")=>{const s=game.createInitialState(name,"yi","standard");s.crew=1200;return s};
 
 // ---- 阵容 ----
 {
   const s=fresh();s.intel.clocktower=true;
-  const sess=game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui","chengye"],troops:30,tactic:"steady"},seeded(1));
+  const sess=game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui","chengye"],troops:300,tactic:"steady"},seeded(1));
   const us=sess.units.filter(u=>u.side==="us"),them=sess.units.filter(u=>u.side==="them");
   assert.equal(us.length,3,"三名头目各自成一路");
-  assert.equal(us.reduce((a,u)=>a+u.hp0,0),30,"出战人数全部分到头目手下");
+  assert.equal(us.reduce((a,u)=>a+u.hp0,0),300,"出战人数全部分到头目手下");
   assert.equal(them.reduce((a,u)=>a+u.hp0,0),s.territories.clocktower.guard,"守军人数等于驻防");
   assert.ok(them.length>=1&&them.length<=3,"守方一到三路");
   assert.ok(us.some(u=>u.row==="front")&&them.some(u=>u.row==="front"),"两边都至少有一路站前排");
@@ -28,23 +28,23 @@ const fresh=(name="沈卡牌")=>{const s=game.createInitialState(name,"yi","stan
 // ---- 分兵与带兵上限 ----
 {
   const s=fresh();
-  const split=game.splitTroops(s,["player","zhaokui"],40,{});
-  assert.equal(split.player+split.zhaokui,40,"自动分兵加起来等于出战人数");
-  const manual=game.splitTroops(s,["player","zhaokui"],40,{player:5});
-  assert.equal(manual.player,5,"手动分过的人数保留");
-  assert.equal(manual.zhaokui,35,"余下的人补给其他头目");
-  const capped=game.splitTroops(s,["player"],500,{});
+  const split=game.splitTroops(s,["player","zhaokui"],400,{});
+  assert.equal(split.player+split.zhaokui,400,"自动分兵加起来等于出战人数");
+  const manual=game.splitTroops(s,["player","zhaokui"],400,{player:50});
+  assert.equal(manual.player,50,"手动分过的人数保留");
+  assert.equal(manual.zhaokui,350,"余下的人补给其他头目");
+  const capped=game.splitTroops(s,["player"],5000,{});
   assert.ok(capped.player<=game.troopCap(game.CHARACTER_DEFS.player),"单人带兵不超过统率上限");
-  const big=fresh("沈大军");big.crew=400;
-  const bs=game.startBattle(big,{targetId:"clocktower",leaderIds:["player"],troops:300,tactic:"steady"},seeded(2));
+  const big=fresh("沈大军");big.crew=4000;
+  const bs=game.startBattle(big,{targetId:"clocktower",leaderIds:["player"],troops:3000,tactic:"steady"},seeded(2));
   assert.equal(bs.troops,game.maxTroops(big,["player"]),"带不动的人不上阵");
-  assert.equal(big.crew,400-bs.troops,"留在老街的人还在能战池里");
+  assert.equal(big.crew,4000-bs.troops,"留在老街的人还在能战池里");
 }
 
 // ---- 确定性与存档往返 ----
 function playOut(s,cards,rngSeed){const rng=seeded(rngSeed);const out=[];let i=0;while(s.battleSession){const r=game.applyStageChoice(s,cards[i++]||"hold",rng);out.push(JSON.stringify(r.ended?r.report.events:s.battleSession.events))}return{report:s.lastBattle,ev:out}}
 {
-  const mk=()=>{const s=fresh();game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui"],troops:40,tactic:"steady"},seeded(5));return s};
+  const mk=()=>{const s=fresh();game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui"],troops:400,tactic:"steady"},seeded(5));return s};
   const a=playOut(mk(),["press","hold","hold"],9),b=playOut(mk(),["press","hold","hold"],9);
   assert.deepEqual(a.ev,b.ev,"同样的种子和出牌，回放事件逐条一致");
   assert.equal(a.report.losses,b.report.losses);
@@ -61,19 +61,19 @@ function playOut(s,cards,rngSeed){const rng=seeded(rngSeed);const out=[];let i=0
 // ---- 旧版存档里打到一半的仗 ----
 {
   const s=fresh("沈旧仗");
-  game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui"],troops:40,tactic:"steady"},seeded(3));
+  game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui"],troops:400,tactic:"steady"},seeded(3));
   const old=JSON.parse(JSON.stringify(s));
   ["units","split","rows","round","status","converted","bribed","events","power","defPower"].forEach(k=>delete old.battleSession[k]);
   const loaded=game.normalizeState(old);
   assert.ok(loaded.battleSession,"旧版会话不丢弃");
   let rep;const rng=seeded(4);while(loaded.battleSession)rep=game.applyStageChoice(loaded,"hold",rng);
   assert.ok(["win","loss"].includes(loaded.lastBattle.outcome),"按当下阵容摆开后能正常打完");
-  assert.ok(loaded.lastBattle.losses>=0&&loaded.lastBattle.losses<=40);
+  assert.ok(loaded.lastBattle.losses>=0&&loaded.lastBattle.losses<=400);
 }
 
 // ---- 号令牌：casualtyMult 只改倒下的人数，不改战力对比 ----
 {
-  const run=card=>{const s=fresh();s.territories.clocktower.guard=60;game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui"],troops:40,tactic:"steady"},seeded(21));const before=JSON.stringify(s.battleSession.units.filter(u=>u.side==="them").map(u=>u.str));game.applyStageChoice(s,card,()=>.4);return{s,before}};
+  const run=card=>{const s=fresh();s.territories.clocktower.guard=600;game.startBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui"],troops:400,tactic:"steady"},seeded(21));const before=JSON.stringify(s.battleSession.units.filter(u=>u.side==="them").map(u=>u.str));game.applyStageChoice(s,card,()=>.4);return{s,before}};
   const hold=run("hold"),press=run("press");
   const themStr=x=>x.s.battleSession.units.filter(u=>u.side==="them").reduce((a,u)=>a+u.str,0);
   assert.ok(themStr(press)<themStr(hold),"压上去打掉对面更多战力");
@@ -98,11 +98,11 @@ function playOut(s,cards,rngSeed){const rng=seeded(rngSeed);const out=[];let i=0
 
 // ---- 方景曜「砸钱」：被撬走的人既不算阵亡也不回来 ----
 {
-  const s=fresh("沈被撬");s.crew=200;
+  const s=fresh("沈被撬");s.crew=2000;
   const target=Object.keys(s.territories).find(id=>s.territories[id].owner==="wan");
   game.TERRITORY_DEFS.old_street.neighbors.push(target);game.TERRITORY_DEFS[target].neighbors.push("old_street");
   s.officers.filter(o=>o.side==="wan"&&o.id!=="fangjingyao").forEach(o=>{o.injured=3});
-  game.startBattle(s,{targetId:target,leaderIds:["player","zhaokui"],troops:60,tactic:"steady"},seeded(8));
+  game.startBattle(s,{targetId:target,leaderIds:["player","zhaokui"],troops:600,tactic:"steady"},seeded(8));
   const sess=s.battleSession;
   assert.ok(sess.units.some(u=>u.id==="fangjingyao"),"方景曜亲自守");
   assert.ok(sess.bribed>0,"开战前撬走了人");
@@ -116,7 +116,7 @@ function playOut(s,cards,rngSeed){const rng=seeded(rngSeed);const out=[];let i=0
 
 // ---- 胜算预估：不碰存档、稳定、随兵力单调 ----
 {
-  const s=fresh("沈估算");s.territories.clocktower.guard=50;
+  const s=fresh("沈估算");s.territories.clocktower.guard=500;
   const before=JSON.stringify(s);
   const plan=n=>({targetId:"clocktower",leaderIds:["player","zhaokui","chengye"],troops:n,tactic:"steady"});
   const a=game.simulateBattleOdds(s,plan(20)),b=game.simulateBattleOdds(s,plan(20)),c=game.simulateBattleOdds(s,plan(60));
@@ -128,8 +128,8 @@ function playOut(s,cards,rngSeed){const rng=seeded(rngSeed);const out=[];let i=0
 
 // ---- 守军被打散就提前收场 ----
 {
-  const s=fresh("沈速胜");s.territories.clocktower.guard=3;s.morale=95;
-  const rep=game.resolveBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui","chengye"],troops:60,tactic:"assault"},seeded(12));
+  const s=fresh("沈速胜");s.territories.clocktower.guard=30;s.morale=95;
+  const rep=game.resolveBattle(s,{targetId:"clocktower",leaderIds:["player","zhaokui","chengye"],troops:600,tactic:"assault"},seeded(12));
   assert.equal(rep.outcome,"win");
   assert.ok(rep.stages.length<3,"三个人的守军撑不满三段");
 }

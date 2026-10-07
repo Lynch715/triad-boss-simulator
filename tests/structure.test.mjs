@@ -10,11 +10,11 @@ assert.equal(game.ownTerritories(s).length,1);
 assert.equal(Object.keys(s.territories).length,36,"香港18区各两个地段");
 assert.deepEqual(new Set(game.attackableTerritories(s)),new Set(["clocktower","west_market","kowlooncity"]),"开局三条九龙扩张路线");
 assert.equal(s.ap,3);
-assert.equal(s.crew,42);
+assert.equal(s.crew,420);
 assert.equal(s.regroup,0,"开局没有整补中的人");
 assert.equal(s.wounded,0,"开局没有伤员");
-assert.equal(game.totalCrew(s),42,"总人手=能战+整补+养伤");
-assert.equal(game.crewCap(s),60,"开局只有老街一块地：40+1*20+0");
+assert.equal(game.totalCrew(s),420,"总人手=能战+整补+养伤");
+assert.equal(game.crewCap(s),600,"开局只有老街一块地：(40+1*20+0)×10");
 assert.ok(game.monthlyGross(s)>game.monthlyUpkeep(s),"开局不应当立即入不敷出");
 assert.equal(game.officerCapacity(s),7);
 
@@ -63,46 +63,46 @@ assert.equal(oldSave.flags.debtCrisisQueued,false);
 assert.equal(game.normalizeState({version:1,name:"坏档"}),null);
 
 // 战斗单元夹具：让香港仔与老街相邻，复用三段式战斗的隔离测试。真实地图连通性在 city-economy.test.mjs 验证。
-game.TERRITORY_DEFS.old_street.neighbors.push("south_dock");
-game.TERRITORY_DEFS.south_dock.neighbors.push("old_street");
+game.TERRITORY_DEFS.old_street.neighbors.push("shipyard");
+game.TERRITORY_DEFS.shipyard.neighbors.push("old_street");
 
 const shortCrew=game.createInitialState("沈缺人","wei","standard");
-shortCrew.crew=9;
+shortCrew.crew=90;
 assert.throws(()=>game.resolveBattle(shortCrew,{
-  targetId:"south_dock",
+  targetId:"shipyard",
   leaderIds:["player"],
-  troops:9,
+  troops:90,
   tactic:"steady"
 },()=>.5),/not enough crew/);
 
 const bs=game.createInitialState("沈开战","yi","standard");
-bs.crew=120;
-const sess=game.startBattle(bs,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:60,tactic:"steady"});
+bs.crew=1200;
+const sess=game.startBattle(bs,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:600,tactic:"steady"});
 assert.equal(sess.stage,1,"开战后停在第1段");
 assert.equal(sess.momentum,0);
 assert.equal(sess.losses,0);
 assert.ok(sess.ratio>0,"ratio 必须在开战时冻结");
-assert.equal(bs.crew,60,"出战即扣人：120-60");
+assert.equal(bs.crew,600,"出战即扣人：1200-600");
 assert.equal(sess.mods.moraleFloor,45,"沈川在阵→士气下限45");
 assert.equal(bs.battleSession,sess);
 assert.deepEqual(sess.leaderIds,["player","zhaokui"],"leaderIds 应按入参顺序保留");
 const dedup=game.createInitialState("沈重复","yi","standard");
-dedup.crew=120;
-const dsess=game.startBattle(dedup,{targetId:"south_dock",leaderIds:["player","player","player"],troops:60,tactic:"steady"});
+dedup.crew=1200;
+const dsess=game.startBattle(dedup,{targetId:"shipyard",leaderIds:["player","player","player"],troops:600,tactic:"steady"});
 assert.deepEqual(dsess.leaderIds,["player"],"重复头目必须去重，否则战力和奖励都会翻倍");
 const picky=game.createInitialState("沈筛选","yi","standard");
-picky.crew=120;
+picky.crew=1200;
 picky.officers.find(o=>o.id==="zhaokui").injured=2;
-const psess=game.startBattle(picky,{targetId:"south_dock",leaderIds:["zhaokui","hewanshan","sumanqing","chengye","player"],troops:60,tactic:"steady"});
+const psess=game.startBattle(picky,{targetId:"shipyard",leaderIds:["zhaokui","hewanshan","sumanqing","chengye","player"],troops:600,tactic:"steady"});
 assert.deepEqual(psess.leaderIds,["sumanqing","chengye","player"],"受伤与敌方头目要剔除，且最多取3人");
 const busy=game.createInitialState("沈重入","yi","standard");
-busy.crew=120;
-game.startBattle(busy,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
-assert.throws(()=>game.startBattle(busy,{targetId:"golden_bay",leaderIds:["player"],troops:60,tactic:"steady"}),/battle in progress/,"已有战斗进行中时不得再开一场");
+busy.crew=1200;
+game.startBattle(busy,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"});
+assert.throws(()=>game.startBattle(busy,{targetId:"golden_bay",leaderIds:["player"],troops:600,tactic:"steady"}),/battle in progress/,"已有战斗进行中时不得再开一场");
 const nolead=game.createInitialState("沈无将","yi","standard");
-nolead.crew=120;
-assert.throws(()=>game.startBattle(nolead,{targetId:"south_dock",leaderIds:["hewanshan"],troops:60,tactic:"steady"}),/no leaders/);
-assert.throws(()=>game.startBattle(nolead,{targetId:"south_dock",leaderIds:["player"],troops:undefined,tactic:"steady"}),/invalid troops/);
+nolead.crew=1200;
+assert.throws(()=>game.startBattle(nolead,{targetId:"shipyard",leaderIds:["hewanshan"],troops:600,tactic:"steady"}),/no leaders/);
+assert.throws(()=>game.startBattle(nolead,{targetId:"shipyard",leaderIds:["player"],troops:undefined,tactic:"steady"}),/invalid troops/);
 
 const stateBefore=JSON.stringify(bs);
 const opt1=game.stageOptions(bs,sess);
@@ -134,14 +134,14 @@ assert.ok(game.stageOptions(bs,sess).some(o=>o.id==="hold"),"稳住必须恒在�
 sess.stage=1;
 // 月度推进不得在血拼进行中发生
 const midFight=game.createInitialState("沈月中","yi","standard");
-midFight.crew=120;
-game.startBattle(midFight,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
+midFight.crew=1200;
+game.startBattle(midFight,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"});
 assert.equal(game.advanceMonth(midFight,true),false,"血拼进行中不得推进月份");
 assert.equal(midFight.month,0);
 
 const adv=game.createInitialState("沈推进","yi","standard");
-adv.crew=120;
-const advSess=game.startBattle(adv,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:60,tactic:"steady"});
+adv.crew=1200;
+const advSess=game.startBattle(adv,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:600,tactic:"steady"});
 const advRatio=advSess.ratio,crewBefore=adv.crew;
 const r1=game.applyStageChoice(adv,"hold",()=>.5);      // rng=.5 -> u=1.0
 assert.equal(r1.ended,false);
@@ -159,11 +159,11 @@ assert.equal(adv.battleSession.log[0].name,"开局");
 // 第1段不能鸣金：stageOptions 不提供该选项，因此必须被拒。
 // 必须另起一场没打过的战斗来验——adv 此刻已经被上面那次 hold 推进到第2段了。
 const fresh=game.createInitialState("沈开局撤","yi","standard");
-fresh.crew=120;
-game.startBattle(fresh,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
+fresh.crew=1200;
+game.startBattle(fresh,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"});
 assert.equal(fresh.battleSession.stage,1);
 assert.throws(()=>game.applyStageChoice(fresh,"withdraw",()=>.5),/invalid option/,"第1段不得撤退");
-assert.equal(fresh.crew,120-fresh.battleSession.troops,"被拒的撤退不得再额外扣人（出战人数按头目能带的上限封顶）");
+assert.equal(fresh.crew,1200-fresh.battleSession.troops,"被拒的撤退不得再额外扣人（出战人数按头目能带的上限封顶）");
 // 非法选项不得留下任何副作用
 const stageOneStage=adv.battleSession.stage;
 const crewAfterThrow=adv.crew;
@@ -173,35 +173,35 @@ assert.equal(adv.battleSession.stage,stageOneStage,"抛错不得推进段数");
 // 伤亡累计封顶在出战人数：否则 finishBattle 算幸存者会得到负数，人手池会凭空膨胀。
 // 自然战斗打不满这个上限（每段约扣 4% 出战人数），所以直接把 losses 顶到临界值来验。
 const capLoss=game.createInitialState("沈封顶","wei","standard");
-capLoss.crew=200;
-game.startBattle(capLoss,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
-capLoss.battleSession.losses=59;
+capLoss.crew=2000;
+game.startBattle(capLoss,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"});
+capLoss.battleSession.losses=599;
 game.applyStageChoice(capLoss,"hold",()=>.5);
-assert.ok(capLoss.battleSession.losses<=60,`伤亡 ${capLoss.battleSession.losses} 不得超过出战的 60 人`);
+assert.ok(capLoss.battleSession.losses<=600,`伤亡 ${capLoss.battleSession.losses} 不得超过出战的 600 人`);
 // rng=0 -> u=0.705，走劣势分支，覆盖 .25 档与"对面顶住了"文案。
 // 兵力必须真的处于劣势：30人打驻防68，ratio<1，再好的骰子也翻不出正势。
 const bad=game.createInitialState("沈劣势","yi","standard");
-bad.crew=300;
-const badSess=game.startBattle(bad,{targetId:"south_dock",leaderIds:["player"],troops:30,tactic:"steady"});
+bad.crew=3000;
+const badSess=game.startBattle(bad,{targetId:"shipyard",leaderIds:["player"],troops:300,tactic:"steady"});
 assert.ok(badSess.ratio<1,"这一局必须真的是劣势，否则下面的断言没有意义");
 game.applyStageChoice(bad,"hold",()=>0);
 assert.ok(bad.battleSession.momentum<0,"u=0.705 且 ratio<1 应打出负势");
 assert.ok(bad.battleSession.log[0].text.includes("本段我方折损"),"每段战报要写明双方折损");
 // 会话结束后不得再推进
 const done=game.createInitialState("沈越界","yi","standard");
-done.crew=120;
-game.startBattle(done,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
+done.crew=1200;
+game.startBattle(done,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"});
 done.battleSession.stage=4;
 assert.throws(()=>game.applyStageChoice(done,"hold",()=>.5),/battle already finished/,"越界段不得再打");
 const noFight=game.createInitialState("沈无战","yi","standard");
 assert.throws(()=>game.applyStageChoice(noFight,"hold",()=>.5),/no battle in progress/);
 
 const fin=game.createInitialState("沈结算","yi","standard");
-fin.crew=200;fin.morale=95;fin.territories.south_dock.guard=8;
-const fr=game.resolveBattle(fin,{targetId:"south_dock",leaderIds:["player","zhaokui","chengye"],troops:150,tactic:"assault"},()=>.99);
+fin.crew=2000;fin.morale=95;fin.territories.shipyard.guard=80;
+const fr=game.resolveBattle(fin,{targetId:"shipyard",leaderIds:["player","zhaokui","chengye"],troops:1500,tactic:"assault"},()=>.99);
 assert.equal(fr.won,true);
 assert.equal(fr.outcome,"win");
-assert.equal(fin.territories.south_dock.owner,"player");
+assert.equal(fin.territories.shipyard.owner,"player");
 assert.equal(fin.battleSession,null,"结算后必须清空会话");
 assert.equal(fin.winStreak,1,"胜场连胜计数");
 assert.ok(fr.stages.length>=1&&fr.stages.length<=3,"战报按实际打了几段来写：守军提前打散就提前收场");
@@ -214,14 +214,15 @@ function winRate(troops,seed,n){
   let w=0;const rng=seeded(seed);
   for(let k=0;k<n;k++){
     const t=game.createInitialState("沈平衡","yi","standard");
-    t.crew=400;t.morale=62;t.territories.south_dock.guard=46;
-    if(game.resolveBattle(t,{targetId:"south_dock",leaderIds:["player","zhaokui","chengye"],troops,tactic:"steady"},rng).won)w++;
+    t.crew=4000;t.morale=62;t.territories.shipyard.guard=460;
+    if(game.resolveBattle(t,{targetId:"shipyard",leaderIds:["player","zhaokui","chengye"],troops,tactic:"steady"},rng).won)w++;
   }
   return w/n;
 }
 // 兵力只能在 ratio∈(0.772,1.418) 这段窗口里取样：战力对兵力是仿射的（头目那份常数很大），
 // 34人→ratio≈0.89，56人→ratio≈1.13，倍差 1.29 才塞得进窗口。取 45/160 会直接冲出窗口两端变成必胜必败。
-const WEAK_TROOPS=34,STRONG_TROOPS=56;
+// 2026-10：人数×10、敌方卡牌系数 1.6（抵掉头目等级带来的增强）之后，窗口整体右移到 400/650 人（ratio≈0.99/1.28）。
+const WEAK_TROOPS=400,STRONG_TROOPS=650;
 const weakRate=winRate(WEAK_TROOPS,11000,150),strongRate=winRate(STRONG_TROOPS,11000,150);
 assert.ok(strongRate>weakRate+.3,`兵力差必须显著改变胜率：${WEAK_TROOPS}人 ${weakRate} vs ${STRONG_TROOPS}人 ${strongRate}`);
 assert.ok(weakRate>0,"弱势方不应是必败死区（旧版 ratio<0.848 必败）");
@@ -234,32 +235,32 @@ assert.equal(game.hireCommon(s,candidate.id),true);
 assert.equal(s.ap,2);
 assert.equal(s.officers.some(o=>o.id===candidate.id&&o.side==="player"),true);
 
-s.crew=120;
+s.crew=1200;
 s.morale=95;
-s.territories.south_dock.guard=12;
+s.territories.shipyard.guard=120;
 const report=game.resolveBattle(s,{
-  targetId:"south_dock",
+  targetId:"shipyard",
   leaderIds:["player","zhaokui","chengye"],
-  troops:90,
+  troops:900,
   tactic:"assault"
 },()=>.99);
 assert.equal(report.won,true);
-assert.equal(s.territories.south_dock.owner,"player");
+assert.equal(s.territories.shipyard.owner,"player");
 assert.equal(game.ownTerritories(s).length,2);
-assert.ok(s.crew<120,"battle must consume real crew");
+assert.ok(s.crew<1200,"battle must consume real crew");
 
 const finalState=game.createInitialState("沈终局","wei","standard");
 for(const [id,t] of Object.entries(finalState.territories)){
   if(id!=="central_harbor")t.owner="player";
 }
-finalState.crew=240;
+finalState.crew=2400;
 finalState.morale=100;
-finalState.territories.central_harbor.guard=10;
+finalState.territories.central_harbor.guard=100;
 assert.deepEqual(game.attackableTerritories(finalState),["central_harbor"]);
 const finalReport=game.resolveBattle(finalState,{
   targetId:"central_harbor",
   leaderIds:["player","zhaokui","sumanqing"],
-  troops:180,
+  troops:1800,
   tactic:"steady"
 },()=>.99);
 assert.equal(finalReport.won,true);
@@ -286,11 +287,11 @@ function joinNamed(state,id){
 // quitAt=2 表示第2段鸣金；quitAt=0 表示打满三段
 function runBattle(quitAt,extraLeader){
   const g=game.createInitialState("沈撤退","yi","standard");
-  g.crew=200;g.morale=70;
+  g.crew=2000;g.morale=70;
   if(extraLeader)joinNamed(g,extraLeader);
   const ids=["player","zhaokui"];if(extraLeader)ids[1]=extraLeader;
   const rng=()=>.5;
-  game.startBattle(g,{targetId:"south_dock",leaderIds:ids,troops:120,tactic:"steady"},rng);
+  game.startBattle(g,{targetId:"shipyard",leaderIds:ids,troops:1200,tactic:"steady"},rng);
   for(let stage=1;stage<=3&&g.battleSession;stage++){
     game.applyStageChoice(g,quitAt===stage?"withdraw":"hold",rng);
   }
@@ -300,7 +301,7 @@ const quit=runBattle(2),full=runBattle(0);
 assert.equal(quit.lastBattle.outcome,"retreat");
 assert.ok(full.lastBattle,"打满三段必须结算出战报");
 assert.ok(quit.lastBattle.losses<full.lastBattle.losses,"第2段鸣金的伤亡必须严格小于打满三段");
-assert.notEqual(quit.territories.south_dock.owner,"player","撤退不夺地");
+assert.notEqual(quit.territories.shipyard.owner,"player","撤退不夺地");
 assert.equal(quit.morale,64,"撤退士气 70-6=64");
 assert.equal(quit.battleSession,null,"撤退后必须清空会话");
 assert.equal(quit.losses,0,"撤退不计入败场");
@@ -313,9 +314,9 @@ assert.equal(shielded.morale,70,"叶蓉在阵撤退不掉士气");
 
 // 听了赵魁「压上去」之后又收手，他会记仇
 const pressedQuit=game.createInitialState("沈食言","yi","standard");
-pressedQuit.crew=200;
+pressedQuit.crew=2000;
 const pq=()=>.5;
-game.startBattle(pressedQuit,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:120,tactic:"steady"},pq);
+game.startBattle(pressedQuit,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:1200,tactic:"steady"},pq);
 game.applyStageChoice(pressedQuit,"press",pq);
 const zkResentBefore=pressedQuit.officers.find(o=>o.id==="zhaokui").resentment;
 game.applyStageChoice(pressedQuit,"withdraw",pq);
@@ -323,17 +324,17 @@ assert.equal(pressedQuit.officers.find(o=>o.id==="zhaokui").resentment,zkResentB
 
 // 全程稳住再撤退则不该记仇
 const calmQuit=game.createInitialState("沈稳撤","yi","standard");
-calmQuit.crew=200;
+calmQuit.crew=2000;
 const cq=()=>.5;
-game.startBattle(calmQuit,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:120,tactic:"steady"},cq);
+game.startBattle(calmQuit,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:1200,tactic:"steady"},cq);
 game.applyStageChoice(calmQuit,"hold",cq);
 const calmBefore=calmQuit.officers.find(o=>o.id==="zhaokui").resentment;
 game.applyStageChoice(calmQuit,"withdraw",cq);
 assert.equal(calmQuit.officers.find(o=>o.id==="zhaokui").resentment,calmBefore,"没喊过压上就不该记仇");
 
 const prop=game.createInitialState("沈提议","yi","standard");
-prop.crew=200;
-game.startBattle(prop,{targetId:"south_dock",leaderIds:["player","sumanqing","chengye"],troops:100,tactic:"steady"});
+prop.crew=2000;
+game.startBattle(prop,{targetId:"shipyard",leaderIds:["player","sumanqing","chengye"],troops:1000,tactic:"steady"});
 const ps=prop.battleSession;
 assert.ok(game.stageOptions(prop,ps).some(o=>o.id==="flank"),"苏曼青谋略88应给出侧翼提议");
 assert.ok(!game.stageOptions(prop,ps).some(o=>o.id==="parley"),"势≤10 时不给劝降");
@@ -349,19 +350,19 @@ assert.equal(parley.convert,prop.officers.find(o=>o.id==="chengye").stats.charm/
 assert.equal(parley.mult,.88,"劝降要付出实打实的势，否则解锁后就是必选项");
 // 魏小楼：情报未查明时提议后门，并当场写入 intel
 const spy=joinNamed(game.createInitialState("沈探路","yi","standard"),"weixiaolou");
-spy.crew=200;
-game.startBattle(spy,{targetId:"south_dock",leaderIds:["player","weixiaolou"],troops:100,tactic:"steady"});
-assert.ok(!spy.intel.south_dock,"开打前该地情报未知");
+spy.crew=2000;
+game.startBattle(spy,{targetId:"shipyard",leaderIds:["player","weixiaolou"],troops:1000,tactic:"steady"});
+assert.ok(!spy.intel.shipyard,"开打前该地情报未知");
 assert.ok(game.stageOptions(spy,spy.battleSession).some(o=>o.id==="backdoor"));
 game.applyStageChoice(spy,"backdoor",()=>.5);
-assert.equal(spy.intel.south_dock,true,"后门提议必须当场揭穿驻防");
+assert.equal(spy.intel.shipyard,true,"后门提议必须当场揭穿驻防");
 assert.ok(spy.battleSession.log[0].text.includes("魏小楼"),"揭穿要写进战报");
 assert.ok(!game.stageOptions(spy,spy.battleSession).some(o=>o.id==="backdoor"),"情报已知后不再重复提议");
 // 劝降真的会把敌兵变成自己人。用 guard=70 让 enemyLoss 足够大，转化量才可观。
 const talk=game.createInitialState("沈劝降","yi","standard");
-talk.crew=300;talk.morale=95;talk.territories.south_dock.guard=25;   // 出战人数按头目带兵上限封顶到90，守军要相应减少才打得出优势
+talk.crew=3000;talk.morale=95;talk.territories.shipyard.guard=250;   // 出战人数按头目带兵上限封顶到90，守军要相应减少才打得出优势
 const tr=()=>.99;
-game.startBattle(talk,{targetId:"south_dock",leaderIds:["player","chengye"],troops:200,tactic:"steady"},tr);
+game.startBattle(talk,{targetId:"shipyard",leaderIds:["player","chengye"],troops:2000,tactic:"steady"},tr);
 game.applyStageChoice(talk,"hold",tr);
 game.applyStageChoice(talk,"hold",tr);
 assert.ok(talk.battleSession.momentum>10,"这局必须打出优势，否则劝降不会出现");
@@ -376,9 +377,9 @@ assert.equal(talk.crew,crewBeforeStage3+gain,"劝降转化的人直接进能战�
 assert.ok(talk.log.some(l=>l.text.includes("程野把")),"转化要留下江湖记事");
 // 对照组：同样局势下选 hold 则不该有任何转化
 const noTalk=game.createInitialState("沈不劝","yi","standard");
-noTalk.crew=300;noTalk.morale=95;noTalk.territories.south_dock.guard=25;
+noTalk.crew=3000;noTalk.morale=95;noTalk.territories.shipyard.guard=250;
 const nr=()=>.99;
-game.startBattle(noTalk,{targetId:"south_dock",leaderIds:["player","chengye"],troops:200,tactic:"steady"},nr);
+game.startBattle(noTalk,{targetId:"shipyard",leaderIds:["player","chengye"],troops:2000,tactic:"steady"},nr);
 game.applyStageChoice(noTalk,"hold",nr);
 game.applyStageChoice(noTalk,"hold",nr);
 const noCrewBefore=noTalk.crew;
@@ -386,18 +387,19 @@ game.applyStageChoice(noTalk,"hold",nr);
 assert.equal(noTalk.crew,noCrewBefore,"没劝降就不该有人加入，且段内伤亡不动人手池");
 // 阿七断后：成长更快
 const rear=joinNamed(game.createInitialState("沈断后","yi","standard"),"aqi");
-rear.crew=200;
-game.startBattle(rear,{targetId:"south_dock",leaderIds:["player","aqi"],troops:100,tactic:"steady"});
+rear.crew=2000;
+game.startBattle(rear,{targetId:"shipyard",leaderIds:["player","aqi"],troops:1000,tactic:"steady"});
 game.applyStageChoice(rear,"hold",()=>.5);
-const aqiExpBefore=rear.officers.find(o=>o.id==="aqi").exp;
+const totalXP=o=>{let n=o.xp||0;for(let l=1;l<(o.lv||1);l++)n+=game.lvNeed(l);return n};
+const aqiExpBefore=totalXP(rear.officers.find(o=>o.id==="aqi"));
 assert.ok(game.stageOptions(rear,rear.battleSession).some(o=>o.id==="rearguard"),"第2段起阿七可断后");
 game.applyStageChoice(rear,"rearguard",()=>.5);
-assert.equal(rear.officers.find(o=>o.id==="aqi").exp,aqiExpBefore+3,"断后让阿七多长3点经验");
+assert.equal(totalXP(rear.officers.find(o=>o.id==="aqi")),aqiExpBefore+6,"断后让阿七多拿6点经验");
 
 // joinNamed 在 Task 5 已定义并会先剔除同 id 的既有条目（韩彪等本来是敌方头目）
 const duel=joinNamed(game.createInitialState("沈单挑","wei","standard"),"hanbiao");
-duel.crew=200;
-game.startBattle(duel,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:100,tactic:"assault"});
+duel.crew=2000;
+game.startBattle(duel,{targetId:"shipyard",leaderIds:["player","hanbiao"],troops:1000,tactic:"assault"});
 assert.ok(game.stageOptions(duel,duel.battleSession).some(o=>o.id==="duel"),"敌方有高武力头目时应给出单挑");
 game.applyStageChoice(duel,"duel",()=>.01);   // rng 极小 -> 单挑必胜
 assert.ok(duel.battleSession.mods.multRest>1,"单挑胜利提高后续段的势");
@@ -407,8 +409,8 @@ assert.ok(duel.officers.find(o=>o.id==="hanbiao").merit>=8,"单挑胜者记功")
 
 // 单挑落败：自己人受伤、后续段变差、士气下降
 const lost=joinNamed(game.createInitialState("沈落败","wei","standard"),"hanbiao");
-lost.crew=200;lost.morale=70;
-game.startBattle(lost,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:100,tactic:"assault"});
+lost.crew=2000;lost.morale=70;
+game.startBattle(lost,{targetId:"shipyard",leaderIds:["player","hanbiao"],troops:1000,tactic:"assault"});
 game.applyStageChoice(lost,"duel",()=>.999);  // rng 极大 -> 单挑必败
 assert.ok(lost.battleSession.mods.multRest<1,"单挑落败拖累后续段");
 assert.ok(lost.officers.find(o=>o.id==="hanbiao").injured>0,"落败者受伤");
@@ -416,21 +418,21 @@ assert.equal(lost.morale,65,"单挑落败士气 -5（70-5=65），再无其他�
 
 // 韩彪不在阵时赵魁也能单挑，但没有 +0.15 加成
 const noHan=game.createInitialState("沈无韩","wei","standard");
-noHan.crew=200;
-game.startBattle(noHan,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:100,tactic:"assault"});
+noHan.crew=2000;
+game.startBattle(noHan,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:1000,tactic:"assault"});
 assert.ok(game.stageOptions(noHan,noHan.battleSession).some(o=>o.id==="duel"),"赵魁也能发起单挑");
 
 // 敌方全员受伤后不再提供单挑
 const noFoe=joinNamed(game.createInitialState("沈无敵","wei","standard"),"hanbiao");
-noFoe.crew=200;
-game.startBattle(noFoe,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:100,tactic:"assault"});
+noFoe.crew=2000;
+game.startBattle(noFoe,{targetId:"shipyard",leaderIds:["player","hanbiao"],troops:1000,tactic:"assault"});
 noFoe.officers.filter(o=>o.side==="east").forEach(o=>{o.injured=2});
 assert.ok(!game.stageOptions(noFoe,noFoe.battleSession).some(o=>o.id==="duel"),"敌方无可战头目时不给单挑");
 
 // 单挑打伤的敌将必须会痊愈，否则战后收编那条线会被永久掐断
 const healFoe=joinNamed(game.createInitialState("沈愈合","wei","standard"),"hanbiao");
-healFoe.crew=400;
-game.startBattle(healFoe,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:200,tactic:"assault"});
+healFoe.crew=4000;
+game.startBattle(healFoe,{targetId:"shipyard",leaderIds:["player","hanbiao"],troops:2000,tactic:"assault"});
 game.applyStageChoice(healFoe,"duel",()=>.01);
 const hurtFoe=healFoe.officers.find(o=>o.side==="east"&&o.injured>0);
 assert.ok(hurtFoe,"单挑胜利应打伤一名敌将");
@@ -439,23 +441,23 @@ for(let i=0;i<4;i++)game.advanceMonth(healFoe,true);
 assert.equal(healFoe.officers.find(o=>o.id===hurtFoe.id).injured,0,"敌将伤病必须随月份愈合");
 // 单挑一场只能打一次，否则 multRest 会叠到 1.56
 const once=joinNamed(game.createInitialState("沈一次","wei","standard"),"hanbiao");
-once.crew=400;
-game.startBattle(once,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:200,tactic:"assault"});
+once.crew=4000;
+game.startBattle(once,{targetId:"shipyard",leaderIds:["player","hanbiao"],troops:2000,tactic:"assault"});
 game.applyStageChoice(once,"duel",()=>.01);
 assert.equal(once.battleSession.mods.dueled,true);
 assert.equal(once.battleSession.mods.multRest,1.25);
 assert.ok(!game.stageOptions(once,once.battleSession).some(o=>o.id==="duel"),"一场血拼只能单挑一次");
 // 单挑发生在第1段时，multRest 只作用于后续段，不该抬高本段
 const timing=joinNamed(game.createInitialState("沈时序","wei","standard"),"hanbiao");
-timing.crew=400;
-const tSess=game.startBattle(timing,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:200,tactic:"assault"});
+timing.crew=4000;
+const tSess=game.startBattle(timing,{targetId:"shipyard",leaderIds:["player","hanbiao"],troops:2000,tactic:"assault"});
 const tRatio=tSess.ratio;
 game.applyStageChoice(timing,"duel",()=>.01);
 assert.ok(Number.isFinite(timing.battleSession.momentum)&&timing.battleSession.mods.multRest===1.25,"单挑赢下后只抬高后续段");
 // 阿七断后会提高他自己的受伤概率
 const risky=joinNamed(game.createInitialState("沈断后险","yi","standard"),"aqi");
-risky.crew=200;
-game.startBattle(risky,{targetId:"south_dock",leaderIds:["player","aqi"],troops:100,tactic:"steady"});
+risky.crew=2000;
+game.startBattle(risky,{targetId:"shipyard",leaderIds:["player","aqi"],troops:1000,tactic:"steady"});
 game.applyStageChoice(risky,"hold",()=>.5);
 game.applyStageChoice(risky,"rearguard",()=>.5);
 assert.equal(risky.battleSession.mods.aqiRisk,true,"断后要记下加成风险");
@@ -463,8 +465,8 @@ assert.equal(risky.battleSession.mods.aqiRisk,true,"断后要记下加成风险"
 // 单挑当场打伤的自己人必须出现在战报的伤员名单里，且不重复。
 // startBattle 会把已受伤的头目剔出阵容，所以结算时 injured>0 的必然是本场负伤的。
 const rep=joinNamed(game.createInitialState("沈伤报","wei","standard"),"hanbiao");
-rep.crew=400;
-game.startBattle(rep,{targetId:"south_dock",leaderIds:["player","hanbiao"],troops:200,tactic:"assault"});
+rep.crew=4000;
+game.startBattle(rep,{targetId:"shipyard",leaderIds:["player","hanbiao"],troops:2000,tactic:"assault"});
 game.applyStageChoice(rep,"duel",()=>.999);   // 必败 -> 韩彪当场受伤
 assert.ok(rep.officers.find(o=>o.id==="hanbiao").injured>0,"落败者应当场受伤");
 game.applyStageChoice(rep,"hold",()=>.5);
@@ -475,50 +477,50 @@ assert.deepEqual(rep.lastBattle.injured,["韩彪"],"单挑负伤的头目要进�
 // 用同一套阵容与同一 rng，只切 mods.moraleFloor，才能把变量隔离干净。
 function floorPower(morale,withPlayer){
   const a=game.createInitialState("沈低迷","yi","standard");
-  a.crew=900;a.morale=morale;
-  return game.startBattle(a,{targetId:"south_dock",leaderIds:withPlayer?["player","zhaokui"]:["zhaokui","sumanqing"],troops:80,tactic:"steady"}).power;
+  a.crew=9000;a.morale=morale;
+  return game.startBattle(a,{targetId:"shipyard",leaderIds:withPlayer?["player","zhaokui"]:["zhaokui","sumanqing"],troops:800,tactic:"steady"}).power;
 }
-{const base=game.createInitialState("沈对照","yi","standard");base.crew=900;base.morale=45;
- assert.equal(floorPower(10,true),game.startBattle(base,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:80,tactic:"steady"}).power,"士气10但有沈川：开战战力按士气45算");}
+{const base=game.createInitialState("沈对照","yi","standard");base.crew=9000;base.morale=45;
+ assert.equal(floorPower(10,true),game.startBattle(base,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:800,tactic:"steady"}).power,"士气10但有沈川：开战战力按士气45算");}
 assert.ok(floorPower(10,false)<floorPower(45,false),"没有沈川：低士气真的会削弱战力");
-const onHi=floorPower(62,true),offHi=game.startBattle(Object.assign(game.createInitialState("沈高昂","yi","standard"),{crew:900,morale:62}),{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:80,tactic:"steady"}).power;
+const onHi=floorPower(62,true),offHi=game.startBattle(Object.assign(game.createInitialState("沈高昂","yi","standard"),{crew:900,morale:62}),{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:800,tactic:"steady"}).power;
 assert.equal(onHi,offHi,"士气62高于下限45，沈川被动不该改变任何结果");
 
 // 唐霁「唯能者居」：胜利时全员功劳 ×1.5
 const merit=joinNamed(game.createInitialState("沈唯能","yi","standard"),"tangji");
-merit.crew=250;merit.morale=95;merit.territories.south_dock.guard=6;
-game.resolveBattle(merit,{targetId:"south_dock",leaderIds:["player","tangji"],troops:200,tactic:"assault"},()=>.99);
+merit.crew=2500;merit.morale=95;merit.territories.shipyard.guard=60;
+game.resolveBattle(merit,{targetId:"shipyard",leaderIds:["player","tangji"],troops:2000,tactic:"assault"},()=>.99);
 assert.equal(merit.lastBattle.won,true);
 assert.equal(merit.officers.find(o=>o.id==="player").merit,8,"唐霁在阵：胜利功劳 round(5×1.5)=8");
 // 对照组：没有唐霁则是基础 5
 const noMerit=game.createInitialState("沈无唐","yi","standard");
-noMerit.crew=250;noMerit.morale=95;noMerit.territories.south_dock.guard=6;
-game.resolveBattle(noMerit,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:200,tactic:"assault"},()=>.99);
+noMerit.crew=2500;noMerit.morale=95;noMerit.territories.shipyard.guard=60;
+game.resolveBattle(noMerit,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:2000,tactic:"assault"},()=>.99);
 assert.equal(noMerit.lastBattle.won,true);
 assert.equal(noMerit.officers.find(o=>o.id==="player").merit,5,"没有唐霁就是基础功劳5");
 
 // 谢九「只服胜者」：败北忠诚共 -8（通用 -2 再叠 -6）
 const xie=joinNamed(game.createInitialState("沈只服","yi","standard"),"xiejiu");
-xie.crew=60;xie.morale=20;xie.territories.south_dock.guard=78;
-game.resolveBattle(xie,{targetId:"south_dock",leaderIds:["xiejiu"],troops:20,tactic:"steady"},()=>.01);
+xie.crew=600;xie.morale=20;xie.territories.shipyard.guard=780;
+game.resolveBattle(xie,{targetId:"shipyard",leaderIds:["xiejiu"],troops:200,tactic:"steady"},()=>.01);
 assert.equal(xie.lastBattle.won,false,"这局必须打输，否则断言没有意义");
 assert.equal(xie.officers.find(o=>o.id==="xiejiu").loyalty,62,"70 -2(通用) -6(谢九) = 62");
 assert.equal(xie.winStreak,0);
 // 对照组：赵魁同样打输只掉 2
 const zk=game.createInitialState("沈赵败","yi","standard");
-zk.crew=60;zk.morale=20;zk.territories.south_dock.guard=78;
+zk.crew=600;zk.morale=20;zk.territories.shipyard.guard=780;
 const zkBefore=zk.officers.find(o=>o.id==="zhaokui").loyalty;
-game.resolveBattle(zk,{targetId:"south_dock",leaderIds:["zhaokui"],troops:20,tactic:"steady"},()=>.01);
+game.resolveBattle(zk,{targetId:"shipyard",leaderIds:["zhaokui"],troops:200,tactic:"steady"},()=>.01);
 assert.equal(zk.lastBattle.won,false);
 assert.equal(zk.officers.find(o=>o.id==="zhaokui").loyalty,zkBefore-2,"普通头目败北只掉2");
 // 谢九连胜加成：winStreak>=2 时 multRest 起步就是 1.05
 const streak=joinNamed(game.createInitialState("沈连胜","yi","standard"),"xiejiu");
-streak.crew=200;streak.winStreak=2;
-const streakSess=game.startBattle(streak,{targetId:"south_dock",leaderIds:["player","xiejiu"],troops:100,tactic:"steady"});
+streak.crew=2000;streak.winStreak=2;
+const streakSess=game.startBattle(streak,{targetId:"shipyard",leaderIds:["player","xiejiu"],troops:1000,tactic:"steady"});
 assert.equal(streakSess.mods.multRest,1.05,"连胜2场后谢九给全程 ×1.05");
 const noStreak=joinNamed(game.createInitialState("沈无连胜","yi","standard"),"xiejiu");
-noStreak.crew=200;noStreak.winStreak=1;
-assert.equal(game.startBattle(noStreak,{targetId:"south_dock",leaderIds:["player","xiejiu"],troops:100,tactic:"steady"}).mods.multRest,1,"连胜不足2场则无加成");
+noStreak.crew=2000;noStreak.winStreak=1;
+assert.equal(game.startBattle(noStreak,{targetId:"shipyard",leaderIds:["player","xiejiu"],troops:1000,tactic:"steady"}).mods.multRest,1,"连胜不足2场则无加成");
 
 // 旧档缺字段应补默认值，且不得因此被判废
 const mig=game.createInitialState("沈迁移","yi","standard");
@@ -528,8 +530,8 @@ assert.equal(mig.winStreak,0,"旧档缺 winStreak 应补 0");
 // 损坏的会话必须丢弃
 function corrupt(mutate){
   const c=game.createInitialState("沈坏档","yi","standard");
-  c.crew=120;
-  game.startBattle(c,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
+  c.crew=1200;
+  game.startBattle(c,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"});
   mutate(c);
   return game.normalizeState(c);
 }
@@ -547,8 +549,8 @@ const dropped=corrupt(c=>{c.battleSession.stage=9});
 assert.ok(dropped.log.some(l=>l.text.includes("中断")),"丢弃会话要写进江湖录");
 // 完好会话经 JSON 往返后必须保留并可继续
 const ok=game.createInitialState("沈好档","yi","standard");
-ok.crew=120;
-game.startBattle(ok,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:60,tactic:"steady"});
+ok.crew=1200;
+game.startBattle(ok,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:600,tactic:"steady"});
 const roundTrip=game.normalizeState(JSON.parse(JSON.stringify(ok)));
 assert.ok(roundTrip.battleSession,"完好会话必须保留");
 assert.equal(roundTrip.battleSession.stage,1);
@@ -559,32 +561,32 @@ assert.equal(game.applyStageChoice(roundTrip,"hold",()=>.5).ended,false,"往返�
 // 需由已被打散的三家龙头压最后一阵，否则最该有单挑的一战反而没有。
 const lastStand=game.createInitialState("沈终战","wei","standard");
 for(const id of Object.keys(lastStand.territories))if(id!=="central_harbor")lastStand.territories[id].owner="player";
-lastStand.crew=500;
+lastStand.crew=5000;
 ["hewanshan","fangjingyao","guchangfeng"].forEach(id=>{lastStand.officers.find(o=>o.id===id).side="defeated"});
 assert.equal(lastStand.territories.central_harbor.owner,"coalition");
 assert.equal(lastStand.officers.filter(o=>o.side==="coalition").length,0,"同盟名下确实没有头目");
-game.startBattle(lastStand,{targetId:"central_harbor",leaderIds:["player","zhaokui"],troops:300,tactic:"assault"});
+game.startBattle(lastStand,{targetId:"central_harbor",leaderIds:["player","zhaokui"],troops:3000,tactic:"assault"});
 assert.ok(game.stageOptions(lastStand,lastStand.battleSession).some(o=>o.id==="duel"),"终局之战必须能单挑");
 game.applyStageChoice(lastStand,"duel",()=>.01);
 assert.ok(lastStand.officers.some(o=>o.side==="defeated"&&o.injured>0),"被打散的龙头出来压阵并被打伤");
 // 普通地盘不该借用已被打散的龙头当守将
 const normal=game.createInitialState("沈常规","wei","standard");
-normal.crew=300;
+normal.crew=3000;
 normal.officers.filter(o=>o.side==="east").forEach(o=>{o.injured=2});
 ["hewanshan","fangjingyao","guchangfeng"].forEach(id=>{const o=normal.officers.find(x=>x.id===id);if(o&&o.side!=="east")o.side="defeated"});
-game.startBattle(normal,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:200,tactic:"assault"});
+game.startBattle(normal,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:2000,tactic:"assault"});
 assert.ok(!game.stageOptions(normal,normal.battleSession).some(o=>o.id==="duel"),"非同盟地盘守将全伤时不得借调他人");
 
 // 劝降拿下的地盘不服管：稳定度比强攻拿下低 10
 function parleyStability(useParley){
   const s=game.createInitialState("沈收编","yi","standard");
-  s.crew=400;s.morale=95;s.territories.south_dock.guard=25;
+  s.crew=4000;s.morale=95;s.territories.shipyard.guard=250;
   const rng=()=>.99;
-  game.startBattle(s,{targetId:"south_dock",leaderIds:["player","chengye"],troops:200,tactic:"steady"},rng);
+  game.startBattle(s,{targetId:"shipyard",leaderIds:["player","chengye"],troops:2000,tactic:"steady"},rng);
   game.applyStageChoice(s,"hold",rng);game.applyStageChoice(s,"hold",rng);
   game.applyStageChoice(s,useParley?"parley":"hold",rng);
   assert.equal(s.lastBattle.won,true);
-  return s.territories.south_dock.stability;
+  return s.territories.shipyard.stability;
 }
 assert.equal(parleyStability(false),62,"强攻拿下：义字当头的基础稳定度 62");
 assert.equal(parleyStability(true),52,"劝降拿下：收编来的人压不住街面，稳定度 -10");
@@ -592,55 +594,55 @@ assert.equal(parleyStability(true),52,"劝降拿下：收编来的人压不住�
 // ---- 战后人手分流 ----
 // 出战的人在 startBattle 离池，finishBattle 必须把他们分成幸存(整补)/重伤(养伤)/阵亡(消失)三份。
 const settle=game.createInitialState("沈结算","yi","standard");
-settle.crew=120;
-game.resolveBattle(settle,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:60,tactic:"steady"},seeded(7));   // 两人带兵上限 94，60 人全部上阵
+settle.crew=1200;
+game.resolveBattle(settle,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:600,tactic:"steady"},seeded(7));   // 两人带兵上限 94，60 人全部上阵
 const settleRep=settle.lastBattle;
 const settleWounded=Math.round(settleRep.losses*.55);
 assert.ok(settleRep.losses>0,"这场仗必须真的死人，否则断言无意义");
-assert.equal(settle.crew,60,"出战的60人不得直接回到能战池");
-assert.equal(settle.regroup,60-settleRep.losses,"幸存者全部进整补");
+assert.equal(settle.crew,600,"出战的600人不得直接回到能战池");
+assert.equal(settle.regroup,600-settleRep.losses,"幸存者全部进整补");
 assert.equal(settle.wounded,settleWounded,"伤亡的55%进养伤");
-assert.equal(game.totalCrew(settle),120-(settleRep.losses-settleWounded),"总人手只少了阵亡的那部分");
+assert.equal(game.totalCrew(settle),1200-(settleRep.losses-settleWounded),"总人手只少了阵亡的那部分");
 
 // 撤退与战败走同一条分流路径，不能只在胜利分支里结算。
 const settleRetreat=game.createInitialState("沈撤退结算","yi","standard");
-settleRetreat.crew=120;
-game.startBattle(settleRetreat,{targetId:"south_dock",leaderIds:["player","sumanqing"],troops:60,tactic:"steady"});
+settleRetreat.crew=1200;
+game.startBattle(settleRetreat,{targetId:"shipyard",leaderIds:["player","sumanqing"],troops:600,tactic:"steady"});
 game.applyStageChoice(settleRetreat,"hold",seeded(11));
 game.applyStageChoice(settleRetreat,"withdraw",seeded(11));
 assert.equal(settleRetreat.battleSession,null,"撤退后会话必须结束");
 assert.equal(settleRetreat.regroup+settleRetreat.wounded>0,true,"撤退回来的人也要进整补/养伤，不能凭空消失");
-assert.equal(settleRetreat.crew,60,"撤退不把人直接还回能战池");
+assert.equal(settleRetreat.crew,600,"撤退不把人直接还回能战池");
 
 // ---- 每月回流 ----
 const rec=game.createInitialState("沈回流","yi","standard");
-rec.crew=0;rec.regroup=48;rec.wounded=10;rec.cash=100;
+rec.crew=0;rec.regroup=480;rec.wounded=100;rec.cash=100;
 const recOut=game.recoverCrew(rec);
-assert.equal(recOut.back,24,"整补每月回一半：ceil(48*0.5)");
-assert.equal(rec.regroup,24);
-assert.equal(recOut.healed,3,"养伤每月回 ceil(10*0.22)=3");
-assert.equal(recOut.cost,4,"医药费 = 伤员数 * 0.4");
+assert.equal(recOut.back,240,"整补每月回一半：ceil(480*0.5)");
+assert.equal(rec.regroup,240);
+assert.equal(recOut.healed,28,"讲义气：养伤每月回 ceil(100*0.28)=28");
+assert.equal(recOut.cost,4,"医药费 = 伤员数 * 0.04");
 assert.equal(rec.cash,96,"医药费从现金里扣");
-assert.equal(rec.wounded,7);
-assert.equal(rec.crew,27,"24 整补归队 + 3 伤愈");
+assert.equal(rec.wounded,72);
+assert.equal(rec.crew,268,"240 整补归队 + 28 伤愈");
 
 // 付不出药钱：回归减半、掉士气、且不扣钱（钱本来就不够）
 const broke=game.createInitialState("沈没钱养伤","yi","standard");
-broke.crew=0;broke.regroup=0;broke.wounded=10;broke.cash=1;
+broke.crew=0;broke.regroup=0;broke.wounded=100;broke.cash=1;
 const brokeMorale=broke.morale;
 const brokeOut=game.recoverCrew(broke);
 assert.equal(brokeOut.broke,true);
-assert.equal(brokeOut.healed,1,"付不起时回归减半：floor(3/2)");
+assert.equal(brokeOut.healed,14,"付不起时回归减半：floor(28/2)");
 assert.equal(brokeOut.cost,0,"付不起就不扣钱");
 assert.equal(broke.cash,1);
 assert.equal(broke.morale,brokeMorale-4);
 
-// 尾数：整补只剩 3 人时，不能因为"至少回 5 人"而回出负数
+// 尾数：整补只剩 30 人时，不能因为"至少回 50 人"而回出负数
 const tail=game.createInitialState("沈收尾","yi","standard");
-tail.crew=0;tail.regroup=3;tail.wounded=0;
-assert.equal(game.recoverCrew(tail).back,3,"整补余数不足5人时一次归队完毕");
+tail.crew=0;tail.regroup=30;tail.wounded=0;
+assert.equal(game.recoverCrew(tail).back,30,"整补余数不足50人时一次归队完毕");
 assert.equal(tail.regroup,0);
-assert.equal(tail.crew,3);
+assert.equal(tail.crew,30);
 
 // 空池不得产生任何副作用
 const idle=game.createInitialState("沈无伤","yi","standard");
@@ -652,51 +654,51 @@ assert.equal(idle.crew,idleCrew);
 
 // 推进月份必须触发回流
 const flow=game.createInitialState("沈过月","yi","standard");
-flow.regroup=20;flow.ap=0;
+flow.regroup=200;flow.ap=0;
 game.advanceMonth(flow,true);
-assert.ok(flow.regroup<20,"advanceMonth 必须调用 recoverCrew");
+assert.ok(flow.regroup<200,"advanceMonth 必须调用 recoverCrew");
 
 // ---- 人手上限与维护费 ----
 const capped=game.createInitialState("沈满员","yi","standard");
-capped.cash=100;capped.crew=60;
-assert.equal(game.crewCap(capped),60);
+capped.cash=100;capped.crew=600;
+assert.equal(game.crewCap(capped),600);
 assert.equal(game.applyAction(capped,"recruit_crew"),false,"到上限就招不动了");
-assert.equal(capped.crew,60,"被拒的招募不得改变人手");
+assert.equal(capped.crew,600,"被拒的招募不得改变人手");
 assert.equal(capped.ap,3,"被拒的行动不得扣行动点");
 
 const nearCap=game.createInitialState("沈快满","yi","standard");
-nearCap.cash=100;nearCap.crew=55;
+nearCap.cash=100;nearCap.crew=550;
 game.applyAction(nearCap,"recruit_crew");
-assert.equal(game.totalCrew(nearCap),60,"招人不得越过上限");
+assert.equal(game.totalCrew(nearCap),600,"招人不得越过上限");
 
 // 整补和养伤的人也占上限：否则打完仗立刻能招满，池子形同虚设
 const capCounts=game.createInitialState("沈占额","yi","standard");
-capCounts.cash=100;capCounts.crew=10;capCounts.regroup=30;capCounts.wounded=20;
+capCounts.cash=100;capCounts.crew=100;capCounts.regroup=300;capCounts.wounded=200;
 assert.equal(game.applyAction(capCounts,"recruit_crew"),false,"整补/养伤的人同样占用人手上限");
 
 // 养伤的人也要吃饭
 const up=game.createInitialState("沈养伤开销","yi","standard");
 const upBase=game.monthlyUpkeep(up);
-up.crew=22;up.regroup=10;up.wounded=10;
+up.crew=220;up.regroup=100;up.wounded=100;
 assert.equal(game.monthlyUpkeep(up),upBase,"维护费按总人手算，养伤的人不免费");
 
 // ---- 血拼消耗行动点 ----
 // 这是"5分钟通关"的根因之一：过去发起进攻零成本，一个月可以打无限场。
 const apCost=game.createInitialState("沈行动点","yi","standard");
-apCost.crew=200;
-game.startBattle(apCost,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"});
+apCost.crew=2000;
+game.startBattle(apCost,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"});
 assert.equal(apCost.ap,2,"开战消耗1个行动点");
 while(apCost.battleSession)game.applyStageChoice(apCost,"hold",seeded(3));
 
 const apBroke=game.createInitialState("沈没点数","yi","standard");
-apBroke.crew=200;apBroke.ap=0;
-assert.throws(()=>game.startBattle(apBroke,{targetId:"south_dock",leaderIds:["player"],troops:60,tactic:"steady"}),/no action point/);
-assert.equal(apBroke.crew,200,"被拒的开战不得扣人手");
+apBroke.crew=2000;apBroke.ap=0;
+assert.throws(()=>game.startBattle(apBroke,{targetId:"shipyard",leaderIds:["player"],troops:600,tactic:"steady"}),/no action point/);
+assert.equal(apBroke.crew,2000,"被拒的开战不得扣人手");
 
 // 错误优先级：人手不足要先于行动点不足报出来，界面提示才对得上
 const apOrder=game.createInitialState("沈两缺","yi","standard");
-apOrder.crew=9;apOrder.ap=0;
-assert.throws(()=>game.startBattle(apOrder,{targetId:"south_dock",leaderIds:["player"],troops:9,tactic:"steady"}),/not enough crew/);
+apOrder.crew=90;apOrder.ap=0;
+assert.throws(()=>game.startBattle(apOrder,{targetId:"shipyard",leaderIds:["player"],troops:900,tactic:"steady"}),/not enough crew/);
 
 // ---- 存档迁移 ----
 // 旧存档没有三池字段，载入后必须补齐而不是变成 NaN。
@@ -705,7 +707,7 @@ delete legacy.regroup;delete legacy.wounded;
 const migrated=game.normalizeState(JSON.parse(JSON.stringify(legacy)));
 assert.equal(migrated.regroup,0,"旧存档缺失的整补池补0");
 assert.equal(migrated.wounded,0,"旧存档缺失的养伤池补0");
-assert.equal(migrated.crew,42,"旧存档的 crew 原样视为能战");
+assert.equal(migrated.crew,420,"旧存档的 crew 原样视为能战");
 
 // 脏数据不得变成 NaN
 const dirty=game.createInitialState("沈脏档","yi","standard");
@@ -716,45 +718,45 @@ assert.equal(cleaned.wounded,0);
 
 // 中断的战斗：出战的人已经离池，丢弃会话时必须还回整补池，否则凭空蒸发
 const aborted=game.createInitialState("沈中断","yi","standard");
-aborted.crew=200;
-game.startBattle(aborted,{targetId:"south_dock",leaderIds:["player","zhaokui"],troops:60,tactic:"steady"});
-assert.equal(aborted.crew,140);
+aborted.crew=2000;
+game.startBattle(aborted,{targetId:"shipyard",leaderIds:["player","zhaokui"],troops:600,tactic:"steady"});
+assert.equal(aborted.crew,1400);
 aborted.battleSession.stage=99;                                    // 制造一个 validBattleSession 会拒绝的会话
 const rescued=game.normalizeState(JSON.parse(JSON.stringify(aborted)));
 assert.equal(rescued.battleSession,null,"损坏的会话必须丢弃");
-assert.equal(rescued.regroup,60,"出战的60人要还进整补池");
-assert.equal(game.totalCrew(rescued),200,"总人手不得因为存档损坏而减少");
+assert.equal(rescued.regroup,600,"出战的600人要还进整补池");
+assert.equal(game.totalCrew(rescued),2000,"总人手不得因为存档损坏而减少");
 
 
 // ---- 三池化之后的连带修正：任何"从组织里扣人"的地方都不能只盯着能战池 ----
 // 打完一仗 s.crew 常常是 0（人都在整补），旧写法 Math.max(1,s.crew-n) 会在这种局面下凭空造人。
 const drainEmpty=game.createInitialState("沈空池","yi","standard");
-drainEmpty.crew=0;drainEmpty.regroup=80;drainEmpty.wounded=0;
-assert.equal(game.drainCrew(drainEmpty,8),8,"能战池空时要从整补池里扣");
+drainEmpty.crew=0;drainEmpty.regroup=800;drainEmpty.wounded=0;
+assert.equal(game.drainCrew(drainEmpty,80),80,"能战池空时要从整补池里扣");
 assert.equal(drainEmpty.crew,0);
-assert.equal(drainEmpty.regroup,72);
-assert.equal(game.totalCrew(drainEmpty),72,"总人手必须真的减少 8");
+assert.equal(drainEmpty.regroup,720);
+assert.equal(game.totalCrew(drainEmpty),720,"总人手必须真的减少 80");
 
 const drainOrder=game.createInitialState("沈顺序","yi","standard");
-drainOrder.crew=3;drainOrder.regroup=4;drainOrder.wounded=10;
-assert.equal(game.drainCrew(drainOrder,9),9,"按 能战→整补→养伤 的顺序扣");
-assert.deepEqual([drainOrder.crew,drainOrder.regroup,drainOrder.wounded],[0,0,8]);
+drainOrder.crew=30;drainOrder.regroup=40;drainOrder.wounded=100;
+assert.equal(game.drainCrew(drainOrder,90),90,"按 能战→整补→养伤 的顺序扣");
+assert.deepEqual([drainOrder.crew,drainOrder.regroup,drainOrder.wounded],[0,0,80]);
 
 const drainOver=game.createInitialState("沈扣光","yi","standard");
-drainOver.crew=2;drainOver.regroup=0;drainOver.wounded=1;
-assert.equal(game.drainCrew(drainOver,50),3,"人不够时只扣得到实际人数，不得扣成负数");
+drainOver.crew=20;drainOver.regroup=0;drainOver.wounded=10;
+assert.equal(game.drainCrew(drainOver,500),30,"人不够时只扣得到实际人数，不得扣成负数");
 assert.equal(game.totalCrew(drainOver),0);
 assert.ok(drainOver.crew>=0&&drainOver.regroup>=0&&drainOver.wounded>=0,"三池都不得为负");
 
 // 头目叛离：带走的人要从整个组织算，且不得凭空造人
 const defect=game.createInitialState("沈叛离","yi","standard");
-defect.crew=0;defect.regroup=80;
+defect.crew=0;defect.regroup=800;
 const defector=defect.officers.find(o=>o.id==="zhaokui");
 defector.resentment=90;defector.loyalty=20;
 const beforeDefect=game.totalCrew(defect);
 game.officerTension(defect,()=>0);                       // rng=0 → chance(.2) 必定触发
 assert.equal(defector.side,"defected","这个局面下必须叛离");
-assert.equal(game.totalCrew(defect),beforeDefect-8,"叛离带走的8人必须真的从总人手里消失");
+assert.equal(game.totalCrew(defect),beforeDefect-80,"叛离带走的80人必须真的从总人手里消失");
 
 console.log("structure and core-loop tests passed");
 
@@ -763,23 +765,23 @@ const legacy2=game.createInitialState("沈老档二","yi","standard");
 delete legacy2.factions.east.ambition;
 legacy2.factions.wan.ambition="x";
 legacy2.factions.long.ambition=-3;
-delete legacy2.territories.south_dock.settling;
+delete legacy2.territories.shipyard.settling;
 legacy2.territories.golden_bay.settling=99;
 const mig2=game.normalizeState(JSON.parse(JSON.stringify(legacy2)));
 assert.equal(mig2.factions.east.ambition,0,"缺失的 ambition 补0");
 assert.equal(mig2.factions.wan.ambition,0,"非数字的 ambition 补0");
 assert.equal(mig2.factions.long.ambition,0,"负数 ambition 夹到0");
-assert.equal(mig2.territories.south_dock.settling,0,"缺失的 settling 补0");
+assert.equal(mig2.territories.shipyard.settling,0,"缺失的 settling 补0");
 assert.equal(mig2.territories.golden_bay.settling,3,"超范围的 settling 夹到3");
 
 // ---- 驻防期 ----
 const settleT=game.createInitialState("沈未稳","yi","standard");
-settleT.territories.south_dock.owner="player";settleT.territories.south_dock.settling=3;
+settleT.territories.shipyard.owner="player";settleT.territories.shipyard.settling=3;
 const grossSettling=game.monthlyGross(settleT);
-settleT.territories.south_dock.settling=0;
+settleT.territories.shipyard.settling=0;
 assert.ok(game.monthlyGross(settleT)>grossSettling,"驻防期内收入必须减半");
-settleT.territories.south_dock.settling=2;
-assert.equal(game.effectiveGuard(settleT,"south_dock"),settleT.territories.south_dock.guard*.7,"驻防期被进攻时只算七成");
+settleT.territories.shipyard.settling=2;
+assert.equal(game.effectiveGuard(settleT,"shipyard"),settleT.territories.shipyard.guard*.7,"驻防期被进攻时只算七成");
 const tickT=game.createInitialState("沈递减","yi","standard");
 tickT.territories.old_street.settling=2;
 game.tickSettling(tickT,()=>.9);                        // rng=.9 → 不触发街面不服
@@ -789,7 +791,7 @@ assert.equal(game.settlingTerritories(tickT).length,1);
 // ---- 事件池健全性：30+ 事件在"什么都有"的状态下逐个构造，模板串错误在这里先叫 ----
 {
   const rich=game.createInitialState("沈事件","yi","standard");
-  rich.month=20;rich.cash=100;rich.wins=5;rich.casualties=25;rich.heat=40;rich.wounded=8;
+  rich.month=20;rich.cash=100;rich.wins=5;rich.casualties=250;rich.heat=40;rich.wounded=80;
   ["whitesand","clocktower","fogvillage"].forEach(id=>rich.territories[id].owner="player");
   rich.incited={faction:"east",until:25};
   rich.officers.push(...Array.from({length:4},(_,i)=>game.makeCommonCandidate(rich,i)).map(c=>({...c,side:"player"})));
@@ -838,26 +840,26 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 // ---- 破口：打过一场，那扇门就得漏四个月 ----
 {
   const s=game.createInitialState("沈破口","wei","standard");
-  s.crew=200;s.morale=90;const id="clocktower";
-  s.territories[id].guard=120;
-  game.resolveBattle(s,{targetId:id,leaderIds:["zhaokui"],troops:12,tactic:"assault"},()=>0.99);
-  assert.ok(!game.ownTerritories(s).includes(id),"12人打120驻防不该赢——这条夹具依赖它输");
+  s.crew=2000;s.morale=90;const id="clocktower";
+  s.territories[id].guard=1200;
+  game.resolveBattle(s,{targetId:id,leaderIds:["zhaokui"],troops:120,tactic:"assault"},()=>0.99);
+  assert.ok(!game.ownTerritories(s).includes(id),"120人打1200驻防不该赢——这条夹具依赖它输");
   assert.equal(s.breach[id],s.month+4,"打过就留破口，四个月");
   const before=s.territories[id].guard;
   game.enemyGrowth(s);
-  assert.equal(s.territories[id].guard,before-6,"破口期内不长驻防，每月-6");
-  s.territories[id].guard=32;game.enemyGrowth(s);
-  assert.equal(s.territories[id].guard,30,"失血有下限30，不会把墙磨成纸");
+  assert.equal(s.territories[id].guard,before-60,"破口期内不长驻防，每月-60");
+  s.territories[id].guard=320;game.enemyGrowth(s);
+  assert.equal(s.territories[id].guard,300,"失血有下限300，不会把墙磨成纸");
   s.month+=5;game.pruneSiege(s);
   assert.ok(!(id in s.breach),"过期的破口标记要清掉");
   const cap=game.enemyCap(s,id);game.enemyGrowth(s);
-  assert.ok(s.territories[id].guard>30&&s.territories[id].guard<=cap,"破口一过，驻防照常生长");
+  assert.ok(s.territories[id].guard>300&&s.territories[id].guard<=cap,"破口一过，驻防照常生长");
 }
 // 打赢了就没有破口可言——那块地已经是自己的
 {
   const s=game.createInitialState("沈拿下","wei","standard");
-  s.crew=300;s.morale=95;s.territories.clocktower.guard=8;
-  game.resolveBattle(s,{targetId:"clocktower",leaderIds:["zhaokui","chengye"],troops:200,tactic:"assault"},()=>0.99);
+  s.crew=3000;s.morale=95;s.territories.clocktower.guard=80;
+  game.resolveBattle(s,{targetId:"clocktower",leaderIds:["zhaokui","chengye"],troops:2000,tactic:"assault"},()=>0.99);
   assert.ok(game.ownTerritories(s).includes("clocktower"),"这一仗该赢");
   assert.ok(!("clocktower" in s.breach),"打下来的地不留破口");
 }
@@ -867,21 +869,21 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   const s=game.createInitialState("沈封锁","li","standard");
   const id=game.blockadeTarget(s);
   assert.ok(id&&s.territories[id].owner!=="player"&&s.territories[id].owner!=="free","封锁挑相邻的敌方地盘");
-  assert.equal(id,"south_dock","开局唯一相邻的社团地盘是南港码头");
-  assert.equal(game.blockadeCost(s,id),Math.round(20+s.territories[id].guard*.15));
+  assert.equal(id,"shipyard","开局唯一相邻的社团地盘是南港码头");
+  assert.equal(game.blockadeCost(s,id),Math.round(20+s.territories[id].guard*.015));
   s.cash=5;assert.equal(game.runBlockade(s,id),false,"钱不够就做不成");
   s.cash=400;const cash=s.cash,cost=game.blockadeCost(s,id);
   assert.equal(game.runBlockade(s,id),true);
   assert.equal(Math.round(s.cash),Math.round(cash-cost));
   assert.equal(s.blockade[id],s.month+3,"封锁三个月");
   let g=s.territories[id].guard;game.enemyGrowth(s);
-  assert.equal(s.territories[id].guard,g-10,"单独封锁每月-10");
+  assert.equal(s.territories[id].guard,g-100,"单独封锁每月-100");
   s.breach[id]=s.month+4;g=s.territories[id].guard;game.enemyGrowth(s);
-  assert.equal(s.territories[id].guard,g-14,"破口+封锁叠加为-14而不是-16：双押不该成为唯一解");
+  assert.equal(s.territories[id].guard,g-140,"破口+封锁叠加为-140而不是-160：双押不该成为唯一解");
   s.month+=5;game.pruneSiege(s);
   assert.ok(!(id in s.blockade)&&!(id in s.breach),"到期一起清");
   const empty=game.createInitialState("沈无邻","li","standard");
-  empty.territories.south_dock.owner="free";
+  empty.territories.shipyard.owner="free";
   assert.equal(game.blockadeTarget(empty),undefined,"周围没有社团地盘就封锁不了");
 }
 
@@ -896,7 +898,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   const g=s.territories[id].guard;
   const ok=game.runTurncoat(s,id,seq([0]));                       // rng=0 必落在成功区间
   assert.equal(ok.ok,true);
-  assert.equal(s.territories[id].guard,g-25,"策反成功：驻防-25");
+  assert.equal(s.territories[id].guard,g-250,"策反成功：驻防-250");
   assert.equal(s.postures[id],"shaky","街面开始传闲话：姿态转人心浮动");
   assert.equal(s.flags.turncoatWins,1,"成功次数要记下来，总攻的准备度按它算");
   const s2=game.createInitialState("沈失手","li","standard");
@@ -911,61 +913,61 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 {
   const s=game.createInitialState("沈失序","wei","standard");
   assert.equal(game.factionDisorder(s,"east"),0,"三块地不失序");
-  const capBefore=game.enemyCap(s,"south_dock");
+  const capBefore=game.enemyCap(s,"shipyard");
   ["clocktower","fogvillage","whitesand"].forEach(id=>{s.territories[id].owner="east"});
   assert.equal(game.factionDisorder(s,"east"),3,"八块地：disorder = 8-5");
-  assert.equal(game.enemyCap(s,"south_dock"),90+8*18-3*14,"上限 = 90+n*30 - disorder*22");
-  assert.ok(game.enemyCap(s,"south_dock")>capBefore,"打折之后仍然比三块地时厚：巨无霸还是巨无霸");
+  assert.equal(game.enemyCap(s,"shipyard"),(90+8*18-3*14)*10,"上限 = 90+n*30 - disorder*22");
+  assert.ok(game.enemyCap(s,"shipyard")>capBefore,"打折之后仍然比三块地时厚：巨无霸还是巨无霸");
   ["mall","west_market","north_yard"].forEach(id=>{s.territories[id].owner="east"});
   assert.equal(game.factionDisorder(s,"east"),6);
-  assert.equal(game.enemyCap(s,"south_dock"),90+11*18-6*14,"九块地：360 打到 272，被压回玩家天花板的量级");
+  assert.equal(game.enemyCap(s,"shipyard"),(90+11*18-6*14)*10,"九块地：360 打到 272，被压回玩家天花板的量级");
   // 街面生乱：抢来的地才会闹，老巢不会
-  const t=s.territories.whitesand;t.guard=140;
+  const t=s.territories.whitesand;t.guard=1400;
   const lines=game.disorderTick(s,seq([0]));
   assert.ok(lines.length>=1,"失序要在月报里留一行");
-  assert.ok(s.territories.whitesand.guard<140||s.territories.clocktower.guard<s.territories.clocktower.guard+1);
+  assert.ok(s.territories.whitesand.guard<1400||s.territories.clocktower.guard<s.territories.clocktower.guard+1);
   // 驻防已经很薄的抢来地会直接反水成散户
   const s2=game.createInitialState("沈反水","wei","standard");
   ["clocktower","fogvillage","whitesand","mall","west_market","north_yard"].forEach(id=>{s2.territories[id].owner="east"});
-  s2.territories.whitesand.guard=20;
+  s2.territories.whitesand.guard=200;
   game.disorderTick(s2,seq([0]));
   assert.equal(s2.territories.whitesand.owner,"free","驻防<50的抢来地会卷账本走人，变回散户");
   // 起家地不参与
   const s3=game.createInitialState("沈老巢","wei","standard");
   ["clocktower","fogvillage","whitesand"].forEach(id=>{s3.territories[id].owner="east"});
-  const homeGuards=["south_dock","shipyard","kwuntong"].map(id=>s3.territories[id].guard);
+  const homeGuards=["shipyard","shipyard","kwuntong"].map(id=>s3.territories[id].guard);
   for(let i=0;i<20;i++)game.disorderTick(s3,seq([0]));
-  assert.deepEqual(["south_dock","shipyard","kwuntong"].map(id=>s3.territories[id].guard),homeGuards,"老巢的人心不会说散就散");
+  assert.deepEqual(["shipyard","shipyard","kwuntong"].map(id=>s3.territories[id].guard),homeGuards,"老巢的人心不会说散就散");
   // 策反对失序势力打七折
   const s4=game.createInitialState("沈折扣","li","standard");
-  const full=game.turncoatCost(s4,"south_dock");
+  const full=game.turncoatCost(s4,"shipyard");
   ["clocktower","fogvillage","whitesand"].forEach(id=>{s4.territories[id].owner="east"});
-  assert.equal(game.turncoatCost(s4,"south_dock"),Math.round(full*.7),"失序势力的门更好买：成本×0.7");
+  assert.equal(game.turncoatCost(s4,"shipyard"),Math.round(full*.7),"失序势力的门更好买：成本×0.7");
 }
 
 // ---- 消耗战通路（spec §5.4）：300 驻防的墙，八个月能磨到可打 ----
 {
   const s=game.createInitialState("沈围困","wei","standard");
-  s.crew=90;s.cash=3000;s.morale=85;   // 死局里的玩家从来填不满人手上限：seed0 实测 71/180
-  ["south_dock","clocktower","fogvillage","whitesand","west_market","mall","north_yard"].forEach(id=>{s.territories[id].owner="player";s.territories[id].settling=0});
-  const wall="shipyard";                              // 东潮会的船厂：七块地时够得着的那堵高墙
-  s.territories[wall].guard=300;s.intel[wall]=true;
+  s.crew=900;s.cash=3000;s.morale=85;   // 死局里的玩家从来填不满人手上限：seed0 实测 71/180
+  ["kowlooncity","clocktower","fogvillage","whitesand","west_market","mall","north_yard"].forEach(id=>{s.territories[id].owner="player";s.territories[id].settling=0});
+  const wall="shipyard";                              // 东潮会的红磡：七块地时够得着的那堵高墙
+  s.territories[wall].guard=3000;s.intel[wall]=true;
   const L=["zhaokui","chengye","sumanqing"];
   const rng=(()=>{let n=0;return()=>((n=(n*1664525+1013904223)>>>0)/4294967296)})();
-  const before=game.estimateBattle(s,wall,L,80,"assault").ratio;
+  const before=game.estimateBattle(s,wall,L,800,"assault").ratio;
   assert.ok(before<.6,`起手兵力比 ${before.toFixed(2)}，该是打不动的墙`);
   let taken=false;
   for(let m=0;m<8&&!taken;m++){
-    s.ap=3;s.usedActions={};s.crew=90;
+    s.ap=3;s.usedActions={};s.crew=900;
     game.applyAction(s,"blockade",rng);                            // 每月一次封锁：这是后期现金的主要去处
-    game.resolveBattle(s,{targetId:wall,leaderIds:L,troops:80,tactic:"assault"},rng);  // 打输也算施压
+    game.resolveBattle(s,{targetId:wall,leaderIds:L,troops:800,tactic:"assault"},rng);  // 打输也算施压
     taken=game.ownTerritories(s).includes(wall);
     s.month++;game.enemyGrowth(s);game.pruneSiege(s);
   }
-  s.crew=90;
-  const after=taken?9:game.estimateBattle(s,wall,L,80,"assault").ratio;
+  s.crew=900;
+  const after=taken?9:game.estimateBattle(s,wall,L,800,"assault").ratio;
   assert.ok(after>=.8,`连续施压八个月后兵力比只有 ${after.toFixed(2)}，消耗战通路没有打通（要求 >=0.8）`);
-  assert.ok(taken||s.territories[wall].guard<220,`墙还有 ${s.territories[wall].guard} 驻防，失血量不够`);
+  assert.ok(taken||s.territories[wall].guard<2200,`墙还有 ${s.territories[wall].guard} 驻防，失血量不够`);
   assert.ok(s.month<=8,"八个月之内要么打进去，要么把墙磨到可打");
 }
 
@@ -973,8 +975,8 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 {
   const s=game.createInitialState("沈总攻","wei","standard");s.month=40;
   assert.equal(game.decisiveReady(s),null,"开局不该摊牌");
-  Object.keys(s.territories).forEach(id=>{if(id!=="central_harbor"&&!["south_dock","shipyard","fishmarket"].includes(id))s.territories[id].owner="player"});
-  ["south_dock","shipyard","fishmarket","central_harbor"].forEach(id=>{s.territories[id].owner="east"});
+  Object.keys(s.territories).forEach(id=>{if(id!=="central_harbor"&&!["shipyard","shipyard","fishmarket"].includes(id))s.territories[id].owner="player"});
+  ["shipyard","shipyard","fishmarket","central_harbor"].forEach(id=>{s.territories[id].owner="east"});
   s.factions.wan.defeated=true;s.factions.long.defeated=true;
   assert.equal(game.decisiveReady(s),"east","只剩一家、玩家占优：该上最后一张桌了");
   s.flags.decisiveOffered=s.month;
@@ -982,23 +984,23 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   s.month+=6;
   assert.equal(game.decisiveReady(s),"east","半年后重新触发");
   // 准备度：围困、策反与民心都要算进去
-  s.support=70;s.breach.south_dock=s.month+2;s.blockade.shipyard=s.month+1;s.flags.turncoatWins=2;
+  s.support=70;s.breach.shipyard=s.month+2;s.blockade.shipyard=s.month+1;s.flags.turncoatWins=2;
   assert.equal(game.decisivePrep(s),Math.round((.08*2+.08*2+.1)*100)/100,"准备度 = 破口/封锁/策反各8% + 民心10%");
   // 总攻打赢：整家一次性吞并，直接一统
-  const win=JSON.parse(JSON.stringify(s));win.crew=400;win.morale=95;
+  const win=JSON.parse(JSON.stringify(s));win.crew=4000;win.morale=95;
   const target=game.decisiveTarget(win,"east");
   assert.ok(game.factionTerritories(win,"east").includes(target));
-  win.territories[target].guard=1;game.factionTerritories(win,"east").forEach(id=>{win.territories[id].guard=1});
-  game.startBattle(win,{targetId:target,leaderIds:["zhaokui","chengye"],troops:300,tactic:"assault",decisive:"east",cashIn:0},()=>0.99);
+  win.territories[target].guard=10;game.factionTerritories(win,"east").forEach(id=>{win.territories[id].guard=10});
+  game.startBattle(win,{targetId:target,leaderIds:["zhaokui","chengye"],troops:3000,tactic:"assault",decisive:"east",cashIn:0},()=>0.99);
   while(win.battleSession)game.applyStageChoice(win,"press",()=>0.99);
   assert.equal(game.factionTerritories(win,"east").length,0,"总攻打赢：对方全境易帜");
   assert.equal(win.ended,true);
   assert.equal(win.endingReason,"unified");
   // 总攻打输：不判死，但要丢最外沿两块地和三成人手
-  const lose=JSON.parse(JSON.stringify(s));lose.crew=60;lose.morale=20;
-  game.factionTerritories(lose,"east").forEach(id=>{lose.territories[id].guard=900});
+  const lose=JSON.parse(JSON.stringify(s));lose.crew=600;lose.morale=20;
+  game.factionTerritories(lose,"east").forEach(id=>{lose.territories[id].guard=9000});
   const owned=game.ownTerritories(lose).length,crew=game.totalCrew(lose);
-  game.startBattle(lose,{targetId:game.decisiveTarget(lose,"east"),leaderIds:["zhaokui"],troops:40,tactic:"assault",decisive:"east"},()=>0.01);
+  game.startBattle(lose,{targetId:game.decisiveTarget(lose,"east"),leaderIds:["zhaokui"],troops:400,tactic:"assault",decisive:"east"},()=>0.01);
   while(lose.battleSession)game.applyStageChoice(lose,"press",()=>0.01);
   assert.equal(lose.ended,false,"总攻败不判死");
   assert.equal(game.ownTerritories(lose).length,owned-2,"败要丢最外沿两块地");
@@ -1028,7 +1030,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   early.month=10;["clocktower","fogvillage","whitesand","mall","west_market"].forEach(id=>{early.territories[id].owner="east"});
   assert.equal(game.maybeSiegeWarn(early),null,"第30个月之前不触发守城战");
   // 守得住：对方全境驻防大损，最远一块当场反水
-  const hold=JSON.parse(JSON.stringify(s));hold.month++;hold.crew=900;hold.morale=95;hold.support=80;
+  const hold=JSON.parse(JSON.stringify(s));hold.month++;hold.crew=9000;hold.morale=95;hold.support=80;
   const guards=Object.fromEntries(game.factionTerritories(hold,"east").map(id=>[id,hold.territories[id].guard]));
   const r1=game.resolveSiege(hold,()=>.5);
   assert.equal(r1.held,true);
@@ -1047,7 +1049,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   assert.equal(grim.ended,false);
   // 被打崩：结局 crushed
   const rout=JSON.parse(JSON.stringify(s));rout.month++;rout.crew=0;rout.regroup=0;rout.morale=10;rout.support=10;
-  rout.territories.old_street.guard=1;
+  rout.territories.old_street.guard=10;
   const r3=game.resolveSiege(rout,()=>.99);
   assert.equal(r3.routed,true);
   assert.equal(rout.ended,true);
@@ -1084,7 +1086,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 // 造一个 spec §1 里描述的死局：玩家 7 块、东潮会 7 块、双方驻防都够不着对方。
 {
   const s=game.createInitialState("沈死局","wei","standard");
-  s.month=70;s.cash=5000;s.crew=71;s.regroup=0;
+  s.month=70;s.cash=5000;s.crew=710;s.regroup=0;
   const mine=["old_street","clocktower","fogvillage","whitesand","west_market","mall","north_yard"];
   Object.keys(s.territories).forEach(id=>{s.territories[id].owner=mine.includes(id)?"player":"east";s.territories[id].settling=0;s.territories[id].guard=mine.includes(id)?60:300});
   s.factions.wan.defeated=true;s.factions.long.defeated=true;
