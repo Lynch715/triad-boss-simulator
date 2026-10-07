@@ -77,7 +77,7 @@ const CHARACTER_DEFS={
   aqi:{name:"阿七",faction:"neutral",role:"老街新人",type:"新人",portrait:"assets/ah-qi.webp",stats:{force:52,command:43,scheme:46,business:38,charm:61},trait:"照着你长",traitText:"每次参战都会成长，结局会反映玩家的行事方式。"}
 };
 
-// ---- 雾港全图：14块地 ----
+// ---- 雾港全图：36块地（十八区各两段） ----
 // 结构：老街（玩家，全图最小）被三块散户地半包围；散户带是早期唯一啃得动的目标，
 // 也是玩家与三家社团的必争缓冲区。三家各3块地、驻防很高——正面攻坚是中后期的事。
 // 老街与香港仔保留相邻（原图设定，测试与剧情都依赖这条边）。
@@ -141,153 +141,8 @@ const TERRITORY_DEFS={
   "whitesand":{"name":"长洲","owner":"free","income":6,"guard":58,"district":"离岛区","region":"离岛","affinity":"logistics","bonus":"运输条件好，物流产业收入更高；招募成本-10%","neighbors":["tungchung","sheungwan"]}
 };
 const TERRITORY_TOTAL=Object.keys(TERRITORY_DEFS).length;
-const MAP_POS={
-  "central_harbor": [
-    560,
-    790
-  ],
-  "sheungwan": [
-    440,
-    785
-  ],
-  "golden_bay": [
-    710,
-    800
-  ],
-  "causeway": [
-    805,
-    825
-  ],
-  "new_city": [
-    920,
-    800
-  ],
-  "chaiwan": [
-    1040,
-    880
-  ],
-  "south_dock": [
-    650,
-    995
-  ],
-  "stanley": [
-    865,
-    1015
-  ],
-  "old_street": [
-    470,
-    585
-  ],
-  "clocktower": [
-    550,
-    665
-  ],
-  "west_market": [
-    415,
-    495
-  ],
-  "cheungsha": [
-    310,
-    435
-  ],
-  "shipyard": [
-    690,
-    640
-  ],
-  "kowlooncity": [
-    690,
-    525
-  ],
-  "wongtais": [
-    785,
-    430
-  ],
-  "diamond": [
-    875,
-    445
-  ],
-  "kwuntong": [
-    940,
-    550
-  ],
-  "yautong": [
-    1040,
-    625
-  ],
-  "kwai": [
-    255,
-    350
-  ],
-  "tsingyi": [
-    175,
-    430
-  ],
-  "tsuenwan": [
-    230,
-    255
-  ],
-  "shamtseng": [
-    125,
-    300
-  ],
-  "tuenmun": [
-    65,
-    160
-  ],
-  "butterfly": [
-    80,
-    240
-  ],
-  "yuenlong": [
-    255,
-    110
-  ],
-  "tinsui": [
-    145,
-    70
-  ],
-  "north_yard": [
-    480,
-    60
-  ],
-  "fanling": [
-    570,
-    100
-  ],
-  "taipo": [
-    700,
-    185
-  ],
-  "fishmarket": [
-    635,
-    230
-  ],
-  "mall": [
-    640,
-    355
-  ],
-  "highway": [
-    785,
-    285
-  ],
-  "fogvillage": [
-    990,
-    320
-  ],
-  "tko": [
-    1060,
-    450
-  ],
-  "tungchung": [
-    175,
-    850
-  ],
-  "whitesand": [
-    275,
-    990
-  ]
-};
-const MAP_CURVES={};
+// 坐标对应 assets/map-harbor.webp（1254×1254），每个点都落在图上的陆地里。
+const MAP_POS={"sheungwan":[460,892],"central_harbor":[571,908],"golden_bay":[738,899],"causeway":[857,899],"new_city":[934,966],"chaiwan":[1059,1010],"south_dock":[585,1024],"stanley":[803,991],"clocktower":[669,790],"old_street":[655,669],"shipyard":[740,656],"west_market":[557,585],"cheungsha":[460,536],"kowlooncity":[780,571],"wongtais":[808,481],"diamond":[892,571],"kwuntong":[1003,683],"yautong":[1087,690],"tko":[1116,765],"fogvillage":[1190,695],"kwai":[404,460],"tsingyi":[300,425],"tsuenwan":[376,369],"shamtseng":[265,341],"tuenmun":[209,251],"butterfly":[125,265],"yuenlong":[334,209],"tinsui":[279,118],"north_yard":[557,111],"fanling":[683,153],"taipo":[794,279],"fishmarket":[683,307],"mall":[655,418],"highway":[864,376],"tungchung":[238,953],"whitesand":[181,1059]};
 // 产业按月自动营业，建设占用现金和行动；营业方针每月只能调整一次。
 const INDUSTRIES={
   neighborhood:{name:"街坊生意",icon:"茶",examples:"茶楼 · 餐馆 · 修理铺",cost:16,revenue:6,upkeep:2,description:"回本平稳；照顾街坊可提高本地稳定。"},
@@ -1308,8 +1163,11 @@ function flushEnding(){if(!pendingEnding||modalBusy||modalQueue.length)return fa
 let S=null,creatorCreed="yi",creatorDifficulty="standard",creatorMutators=[],prologueIndex=0,modalQueue=[],modalBusy=false,modalHold=false,pendingEnding=null,saveErrorNotified=false,battleDraft={targetId:"",leaderIds:[],troops:20,tactic:"steady"};
 const $=id=>typeof document!=="undefined"?document.getElementById(id):null;
 
+// 场景照片路径写成字面量，build_single.py 才会把它们打进单文件版。
+const SCENES={hall:"assets/scene-hall.webp",street:"assets/scene-street.webp",pier:"assets/scene-pier.webp"};
+const SCENE_BY_KICKER={"父亲退场":"hall","第一幕终":"hall","第二幕启":"hall","第三幕启":"hall","终幕前夜":"hall","十年之期":"hall","最后一张桌":"hall","委任主政":"hall","战后收编":"hall","人才来投":"hall","人才招募":"hall","讲数":"hall","旧事回响":"hall","月度盘点":"street","雾港事件":"street","警队扫荡":"street","罢工":"street","同盟施压":"street","港城联盟":"street","雾港变局":"street","社团吞并":"street","经营账本":"street","血拼战报":"pier","鸣金收兵":"pier","敌对反扑":"pier","兵临老街":"pier","地盘易主":"pier","离间":"pier","内应":"pier"};
 function enqueue(decision,kicker="雾港事件"){if(!decision)return;modalQueue.push({...decision,kicker});if(!modalHold)pumpModal()}
-function pumpModal(){if(typeof document==="undefined"||modalBusy)return;if(!modalQueue.length){flushEnding();return}const d=modalQueue.shift();modalBusy=true;$("modalKicker").textContent=d.kicker||"雾港事件";$("modalTitle").textContent=d.title||"";$("modalBody").innerHTML=d.body||"";const wrap=$("modalPortraitWrap");if(d.portrait){$("modalPortrait").src=assetUrl(d.portrait);wrap.classList.remove("hidden")}else wrap.classList.add("hidden");$("modalOptions").innerHTML=(d.options||[option("知道了","",()=>{})]).map((o,i)=>`<button class="option-btn ${o.tone||""}" data-option="${i}"><b>${esc(o.text)}</b><span>${esc(o.effect||"")}</span></button>`).join("");$("modalOptions").querySelectorAll("[data-option]").forEach(btn=>btn.addEventListener("click",()=>{const o=d.options?.[Number(btn.dataset.option)];try{o?.apply?.()}finally{$("modalMask").classList.add("hidden");modalBusy=false;saveGame();renderAll();setTimeout(pumpModal,70)}}));$("modalMask").classList.remove("hidden")}
+function pumpModal(){if(typeof document==="undefined"||modalBusy)return;if(!modalQueue.length){flushEnding();return}const d=modalQueue.shift();modalBusy=true;$("modalKicker").textContent=d.kicker||"雾港事件";const scene=d.scene||SCENE_BY_KICKER[d.kicker||"雾港事件"],sw=$("modalSceneWrap");if(sw){if(scene){$("modalScene").src=assetUrl(SCENES[scene]);sw.classList.remove("hidden")}else sw.classList.add("hidden")}$("modalTitle").textContent=d.title||"";$("modalBody").innerHTML=d.body||"";const wrap=$("modalPortraitWrap");if(d.portrait){$("modalPortrait").src=assetUrl(d.portrait);wrap.classList.remove("hidden")}else wrap.classList.add("hidden");$("modalOptions").innerHTML=(d.options||[option("知道了","",()=>{})]).map((o,i)=>`<button class="option-btn ${o.tone||""}" data-option="${i}"><b>${esc(o.text)}</b><span>${esc(o.effect||"")}</span></button>`).join("");$("modalOptions").querySelectorAll("[data-option]").forEach(btn=>btn.addEventListener("click",()=>{const o=d.options?.[Number(btn.dataset.option)];try{o?.apply?.()}finally{$("modalMask").classList.add("hidden");modalBusy=false;saveGame();renderAll();setTimeout(pumpModal,70)}}));$("modalMask").classList.remove("hidden")}
 function toast(text){const el=$("toast");if(!el)return;el.textContent=text;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),1700)}
 
 // ---- 排行榜：一统雾港者按用时排座次 ----
@@ -1436,17 +1294,17 @@ function commonRecruitCard(c){const cost=recruitCost(S,c.cost),disabled=S.ap<1||
 function renderMinimap(visible){
   const edges=new Set(),lines=[],show=new Set(visible||Object.keys(TERRITORY_DEFS));
   Object.entries(TERRITORY_DEFS).forEach(([id,d])=>d.neighbors.forEach(n=>{const key=[id,n].sort().join("|");if(!edges.has(key)){edges.add(key);lines.push(key)}}));
-  const edgeSvg=lines.map(key=>{const [a,b]=key.split("|"),[x1,y1]=MAP_POS[a],[x2,y2]=MAP_POS[b],c=MAP_CURVES[key];
-    return c?`<path d="M${x1} ${y1} Q${c[0]} ${c[1]} ${x2} ${y2}" class="map-edge curved"/>`:`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="map-edge"/>`}).join("");
+  const edgeSvg=lines.map(key=>{const [a,b]=key.split("|"),[x1,y1]=MAP_POS[a],[x2,y2]=MAP_POS[b];
+    return`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="map-edge"/>`}).join("");
   const attackable=new Set(attackableTerritories(S));
   const nodeSvg=Object.keys(TERRITORY_DEFS).map(id=>{
     const [x,y]=MAP_POS[id],t=S.territories[id],f=FACTIONS[t.owner],mine=t.owner==="player";
     const cls=`map-node${mine?" mine":""}${attackable.has(id)?" attackable":""}${mine&&t.settling>0?" settling":""}${mapSel===id?" selected":""}`;
     const sub=mine?(t.settling>0?`未稳${t.settling}`:""):attackable.has(id)?(S.intel[id]?`防${t.guard}`:"可攻"):"";
-    const mark=mine?`<rect class="seal-sq" x="${x-12}" y="${y-12}" width="24" height="24" transform="rotate(-6 ${x} ${y})"/>`:`<circle class="dot" cx="${x}" cy="${y}" r="12" fill="${f.color}"/>`;
-    return`<g class="${cls}" data-map-node="${id}" opacity="${show.has(id)?1:.28}"><circle class="ring" cx="${x}" cy="${y}" r="20"/>${mark}<text x="${x}" y="${y+33}" class="map-name">${TERRITORY_DEFS[id].name}</text>${sub?`<text x="${x}" y="${y-22}" class="map-sub">${sub}</text>`:""}${TERRITORY_DEFS[id].final?`<text x="${x}" y="${y+5}" class="map-final">终</text>`:""}</g>`;
+    const mark=mine?`<rect class="seal-sq" x="${x-15}" y="${y-15}" width="30" height="30" transform="rotate(-6 ${x} ${y})"/>`:`<circle class="dot" cx="${x}" cy="${y}" r="15" fill="${f.color}"/>`;
+    return`<g class="${cls}" data-map-node="${id}" opacity="${show.has(id)?1:.28}"><circle class="ring" cx="${x}" cy="${y}" r="25"/>${mark}<text x="${x}" y="${y+44}" class="map-name">${TERRITORY_DEFS[id].name}</text>${sub?`<text x="${x}" y="${y-30}" class="map-sub">${sub}</text>`:""}${TERRITORY_DEFS[id].final?`<text x="${x}" y="${y+6}" class="map-final">终</text>`:""}</g>`;
   }).join("");
-  return`<div class="fog-map-wrap"><svg class="fog-map" viewBox="0 0 1150 1120" role="group" aria-label="雾港地图"><defs><pattern id="seaLines" width="46" height="18" patternUnits="userSpaceOnUse"><path d="M0 9 q11.5 -5 23 0 t23 0" fill="none" stroke="#7f9590" stroke-width="1" opacity=".45"/></pattern></defs><rect width="1150" height="1120" class="map-sea"/><rect width="1150" height="1120" fill="url(#seaLines)"/><g class="land"><path d="M30 40 L800 15 1090 180 1120 660 820 685 720 600 580 715 360 680 275 580 120 410Z" class="map-land"/><path d="M420 785 Q650 715 1050 800 L1090 980 810 1085 510 1040 385 920Z" class="map-land"/><path d="M60 830 L235 745 340 850 275 1025 95 1050Z" class="map-land"/></g><path d="M38 52 L795 28 1078 188 1107 650 822 672 724 590 582 702 366 668 284 572 132 406Z" class="map-land-shade"/><text x="80" y="80" class="map-region-label">新 界</text><text x="520" y="440" class="map-region-label">九 龙</text><text x="470" y="1022" class="map-region-label">港 岛</text><text x="80" y="1090" class="map-region-label">离 岛</text><text x="640" y="748" class="map-sea-label">维 多 利 亚 港</text><g transform="translate(1070 1040)"><circle r="30" class="map-compass"/><path d="M0 -40 L7 0 L0 40 L-7 0Z" class="map-compass"/><path d="M0 -40 L7 0 L-7 0Z" fill="#5b4a35" opacity=".7"/><text y="-46" class="map-compass-n">北</text></g>${edgeSvg}${nodeSvg}</svg></div>`;
+  return`<div class="fog-map-wrap"><svg class="fog-map" viewBox="0 0 1254 1254" role="group" aria-label="雾港地图"><image href="${assetUrl("assets/map-harbor.webp")}" x="0" y="0" width="1254" height="1254" preserveAspectRatio="none"/><text x="560" y="300" class="map-region-label">新 界</text><text x="300" y="790" class="map-sea-label">维 多 利 亚 港</text>${edgeSvg}${nodeSvg}</svg></div>`;
 }
 let mapRegion="全部",mapScope="all",mapView="map",mapSel=null;
 function territoryRow(id){const d=TERRITORY_DEFS[id],t=S.territories[id],f=FACTIONS[t.owner],mine=t.owner==="player",attackable=attackableTerritories(S).includes(id),known=mine||S.intel[id];return`<tr class="${mine?"mine":""}" data-trow="${id}"><td class="n"><b>${d.name}</b><small>${d.district}</small></td><td><i class="owner-dot" style="background:${f.color}"></i>${f.name}</td><td class="num">${known?t.guard:"不明"}</td><td class="num">${d.income*t.level}万</td><td class="num">${t.level}级${mine&&t.industry?` · ${INDUSTRIES[t.industry]?.icon||""}`:""}</td><td>${mine?"自家":attackable?'<span style="color:var(--seal)">可攻</span>':""}</td></tr>`}
@@ -1487,7 +1345,7 @@ function upgradeTerritory(id){const t=S.territories[id];if(!t||t.owner!=="player
 function renderBattleSession(){
   const b=S.battleSession,panel=$("panel"),place=TERRITORY_DEFS[b.targetId].name;
   const pos=clamp((b.momentum+100)/2,0,100),opts=stageOptions(S,b);
-  panel.innerHTML=`<section class="hero-panel"><span class="eyebrow">${esc(STAGE_NAMES[b.stage-1])} · ${b.stage}/3</span><h2>${esc(place)}，${esc(STAGE_NAMES[b.stage-1])}</h2>
+  panel.innerHTML=`<figure class="scene-banner"><img src="${assetUrl("assets/scene-pier.webp")}" alt=""></figure><section class="hero-panel"><span class="eyebrow">${esc(STAGE_NAMES[b.stage-1])} · ${b.stage}/3</span><h2>${esc(place)}，${esc(STAGE_NAMES[b.stage-1])}</h2>
     <div class="momentum-wrap"><div class="momentum-rail"><i style="left:calc(${pos}% - 1px)"></i></div>
     <div class="momentum-label"><span>对方占上风</span><b>${b.momentum>=0?"+":""}${b.momentum}</b><span>我方占上风</span></div></div>
     ${metrics([[S.crew,"剩余人手"],[b.losses,"本场折损"],[b.troops,"投入"],[tacticMeta(b.tactic).name,"战术"]])}</section>

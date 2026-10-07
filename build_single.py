@@ -52,7 +52,8 @@ def main() -> None:
         lambda _: f"<style>\n{css}\n</style>",
         html,
     )
-    html = html.replace('<script src="app.js?v=9"></script>', f"{loader}\n<script>\n{js}\n</script>")
+    # 版本号每次改版都会变，用正则匹配，免得忘了同步这里导致脚本没被内联。
+    html = re.sub(r'<script src="app\.js(?:\?v=\d+)?"></script>', lambda _: f"{loader}\n<script>\n{js}\n</script>", html)
 
     # 只看属性，别看正文：注释里提到文件名不算外部依赖。
     external = sorted(set(re.findall(r'(?:href|src)="[^"]*\.(?:css|js)(?:\?[^"]*)?"', html)))

@@ -6,14 +6,17 @@
   <meta name="theme-color" content="#17110c">
   <meta name="description" content="接班父亲的和联胜，招人、血拼、吞并势力，一统架空港城雾港。">
   <title>模拟社团老大 · 雾港风云</title>
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   
   <section id="menu" class="screen menu-screen">
-    <div class="menu-portrait">
-      <img src="assets/player.webp" alt="和联胜新任老大">
-      <span class="photo-caption">话事人</span>
+    <div class="photo-stack">
+      <div class="scene-photo"><img src="assets/scene-street.webp" alt=""></div>
+      <div class="menu-portrait">
+        <img src="assets/player.webp" alt="和联胜新任老大">
+        <span class="photo-caption">话事人</span>
+      </div>
     </div>
     <div class="menu-card">
       <div class="cover">
@@ -85,8 +88,11 @@
   </section>
 
   <section id="prologue" class="screen story-screen hidden" aria-live="polite">
-    <div class="story-portrait">
+    <div class="photo-stack">
+     <div class="scene-photo"><img src="assets/scene-hall.webp" alt="旧街祖堂"></div>
+     <div class="story-portrait">
       <img id="prologuePortrait" src="assets/father.webp" alt="剧情人物">
+     </div>
     </div>
     <div class="story-card">
       <span id="prologueKicker" class="eyebrow">序章</span>
@@ -165,6 +171,7 @@
 
   <div id="modalMask" class="modal-mask hidden" role="presentation">
     <section id="modal" class="decision-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <figure id="modalSceneWrap" class="scene-banner modal-scene hidden"><img id="modalScene" alt=""></figure>
       <div id="modalPortraitWrap" class="modal-portrait hidden"><img id="modalPortrait" alt="剧情人物"></div>
       <div class="modal-copy">
         <span id="modalKicker" class="eyebrow">雾港事件</span>
@@ -181,6 +188,6 @@
   </section>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
