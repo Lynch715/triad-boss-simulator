@@ -597,3 +597,8 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px so
   .top-resources{gap:8px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* 收成与战果 */
+.reward-slip{margin:14px 0;padding:14px 16px;border-left:3px solid var(--seal,#963f32);background:rgba(132,105,53,.08)}
+.reward-slip>b{font-size:18px;color:var(--seal,#963f32)}
+.reward-slip p{margin:8px 0 0;line-height:1.6}.reward-slip .stat-chips{margin-top:10px;flex-wrap:wrap}
