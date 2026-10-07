@@ -46,7 +46,7 @@ const MUTATORS={
   goldrush:{name:"金价飞涨",desc:"地盘收入+15%，招募成本+25%"},
   veterans:{name:"老兵还乡",desc:"整补归队更快，招人略多"},
   crackdown:{name:"严打之年",desc:"扫荡更凶，但每场胜仗声望+2"},
-  smuggle:{name:"走私旺季",desc:"码头与金湾收入+40%，外部压力每月+1"}
+  smuggle:{name:"走私旺季",desc:"香港仔与湾仔收入+40%，外部压力每月+1"}
 };
 function mutOn(s,id){return Array.isArray(s.mutators)&&s.mutators.includes(id)}
 function rollMutators(rng=Math.random){const pool=Object.keys(MUTATORS).slice();const out=[];while(out.length<2&&pool.length)out.push(pool.splice(Math.floor(rng()*pool.length),1)[0]);return out}
@@ -164,7 +164,8 @@ function enterpriseProfit(s,id){
  return Math.round((monthlyNet(s)-monthlyNet(without))*10)/10;
 }
 function enterpriseForecast(s,id,kind,level){
- const trial={...s,territories:{...s.territories,[id]:{...s.territories[id],industry:kind,enterpriseLevel:level,building:0}}};
+ // 预估的是开张以后的常态月收益：开张时新地盘的驻防期多半已过，按当下减半的收入算会把产业看得太差。
+ const trial={...s,territories:{...s.territories,[id]:{...s.territories[id],industry:kind,enterpriseLevel:level,building:0,settling:0}}};
  return enterpriseProfit(trial,id);
 }
 function districtHonors(s){
@@ -180,24 +181,24 @@ function developEnterprise(s,id,kind){
   const t=s.territories[id],d=INDUSTRIES[kind];if(!t||t.owner!=="player"||!d||s.ap<1||t.building>0||t.enterpriseLevel>=3||t.industry&&t.industry!==kind)return false;
   const cost=d.cost*((t.enterpriseLevel||0)+1);if(s.cash<cost)return false;
   addCash(s,-cost);s.ap--;t.industry=kind;t.enterpriseLevel=(t.enterpriseLevel||0)+1;t.building=2;t.policy=t.policy||"balanced";t.invested=(t.invested||0)+cost;
-  log(s,"good",`${TERRITORY_DEFS[id].name}投资${cost}万发展${d.name}，两个月后营业。`);return true;
+  log(s,"good",`${TERRITORY_DEFS[id].name}投资${cost}万发展${d.name}，停业整备一个月。`);return true;
 }
 function setEnterprisePolicy(s,id,policy){const t=s.territories[id];if(!t||t.owner!=="player"||!INDUSTRIES[t.industry]||!["balanced","growth","care"].includes(policy)||t.policyMonth===s.month)return false;t.policy=policy;t.policyMonth=s.month;return true}
 function enterpriseTick(s){s.businessNews=[];ownTerritories(s).forEach(id=>{const t=s.territories[id];if(t.building>0){t.building--;if(!t.building){const text=`${TERRITORY_DEFS[id].name}的${INDUSTRIES[t.industry]?.name||"产业"}${t.enterpriseLevel>1?"扩建完工":"开张了"}，声望+2。`;change(s,"rep",2);s.businessNews.push(text);log(s,"good",text)}}if(t.industry&&!t.building){t.stability=clamp(t.stability+(t.policy==="care"?4:t.policy==="growth"?-3:1));}})}
 function recordEnterpriseEarnings(s){ownTerritories(s).forEach(id=>{const t=s.territories[id];if(!t.industry||t.building)return;t.earned=Math.round(((t.earned||0)+enterpriseProfit(s,id))*10)/10;if(t.invested>0&&t.earned>=t.invested&&!t.paidBack){t.paidBack=true;const text=`${TERRITORY_DEFS[id].name}的生意回本了，累计净赚${t.earned}万。`;s.businessNews.push(text);log(s,"good",text)}})}
-function enterpriseSummary(s,id){const t=s.territories[id],d=INDUSTRIES[t.industry];return `<div class="enterprise-summary">${d?`<b>${d.icon} ${d.name} · ${t.enterpriseLevel}级</b><span>${t.building?`整备中 · 还有${t.building}个月`:`每月净收益 ${enterpriseProfit(s,id)>=0?"+":""}${enterpriseProfit(s,id)}万`}</span>${t.invested?`<span>累计净收 ${t.earned||0} / 投入 ${t.invested}万${(t.earned||0)>=t.invested?" · 已回本":""}</span>`:""}`:`<b>待开发铺面</b><span>适合${INDUSTRIES[TERRITORY_DEFS[id].affinity].name} · 营收+25%</span>`}</div>`}
+function enterpriseSummary(s,id){const t=s.territories[id],d=INDUSTRIES[t.industry];return `<div class="enterprise-summary">${d?`<b>${d.icon} ${d.name} · ${t.enterpriseLevel}级</b><span>${t.building?`整备中 · ${t.building>1?"下月照常停业，再下月开张":"下次月结开张"}`:`每月净收益 ${enterpriseProfit(s,id)>=0?"+":""}${enterpriseProfit(s,id)}万`}</span>${t.invested?`<span>累计净收 ${t.earned||0} / 投入 ${t.invested}万${(t.earned||0)>=t.invested?" · 已回本":""}</span>`:""}`:`<b>待开发铺面</b><span>适合${INDUSTRIES[TERRITORY_DEFS[id].affinity].name} · 营收+25%</span>`}</div>`}
 function manageEnterprise(id){const t=S.territories[id];if(!t||t.owner!=="player")return;const d=INDUSTRIES[t.industry];
   const choices=d?[
-    ...(t.enterpriseLevel<3&&!t.building?[option(`扩建${d.name}`,`现金-${d.cost*(t.enterpriseLevel+1)}万 · 1行动点 · 停业2个月 · 完工后月净收约${enterpriseForecast(S,id,t.industry,t.enterpriseLevel+1)}万`,()=>{if(!developEnterprise(S,id,t.industry))toast("现金或行动点不足")})]:[]),
+    ...(t.enterpriseLevel<3&&!t.building?[option(`扩建${d.name}`,`现金-${d.cost*(t.enterpriseLevel+1)}万 · 1行动点 · 停业1个月 · 完工后月净收约${enterpriseForecast(S,id,t.industry,t.enterpriseLevel+1)}万`,()=>{if(!developEnterprise(S,id,t.industry))toast("现金或行动点不足")})]:[]),
     ...Object.entries({balanced:["稳健经营","营收正常；每月稳定+1"],growth:["扩大客流","营收+25%；每月稳定-3"],care:["照顾街坊","营收-15%；每月稳定+4"]}).filter(([k])=>k!==t.policy&&t.policyMonth!==S.month).map(([k,v])=>option(v[0],v[1]+" · 本月可改一次",()=>setEnterprisePolicy(S,id,k)))
-  ]:Object.entries(INDUSTRIES).map(([k,v])=>option(`开办${v.name}${TERRITORY_DEFS[id].affinity===k?" · 本地优势":""}`,`${v.examples}｜${v.cost}万 · 1行动点 · 2个月后开业 · 月净收约${enterpriseForecast(S,id,k,1)}万`,()=>{if(!developEnterprise(S,id,k))toast("现金或行动点不足")}));
+  ]:Object.entries(INDUSTRIES).map(([k,v])=>option(`开办${v.name}${TERRITORY_DEFS[id].affinity===k?" · 本地优势":""}`,`${v.examples}｜${v.cost}万 · 1行动点 · 整备1个月后开业 · 月净收约${enterpriseForecast(S,id,k,1)}万`,()=>{if(!developEnterprise(S,id,k))toast("现金或行动点不足")}));
   enqueue({title:`${TERRITORY_DEFS[id].name} · 产业经营`,body:`${enterpriseSummary(S,id)}${d?`<p>${d.examples}</p>`:""}`,options:[...choices,option("回到地图","",()=>{})]},"经营账本");
 }
 
 const PROLOGUE=[
-  {kicker:"序章 · 雨夜",title:"父亲把钥匙放在了桌上",portrait:"assets/father.webp",body:["窗外的雨打在旧街祖堂的铁皮棚上。沈振海没穿那件平时见人的西装，只穿了一件灰色背心。","他把一串钥匙、一枚磨花的龙头印和一本蓝色旧账簿摆在桌上。<span class='dialogue'>“南港、新城、西关，都被他们拿走了。”</span>","你问他还剩下什么。他抬眼望向窗外的老街：<span class='dialogue'>“剩下这条街，和几个还肯来看我的人。”</span>"]},
+  {kicker:"序章 · 雨夜",title:"父亲把钥匙放在了桌上",portrait:"assets/father.webp",body:["窗外的雨打在旧街祖堂的铁皮棚上。沈振海没穿那件平时见人的西装，只穿了一件灰色背心。","他把一串钥匙、一枚磨花的龙头印和一本蓝色旧账簿摆在桌上。<span class='dialogue'>“红磡、北角、长沙湾，都被他们拿走了。”</span>","你问他还剩下什么。他抬眼望向窗外的老街：<span class='dialogue'>“剩下这条街，和几个还肯来看我的人。”</span>"]},
   {kicker:"序章 · 旧部",title:"三双眼睛都在看你",portrait:"assets/zhao-kui.webp",body:["赵魁站在门边，双手抱在胸前；苏曼青翻着账簿，笔尖一直没停；程野坐在桌角，朝你点了一下头。","他们留下来的理由各不相同。赵魁等着看你敢不敢开战，苏曼青想知道你能不能把账算清，程野只说了一句：<span class='dialogue'>“你上，我就上。”</span>","沈振海咳了很久，最后看着你：<span class='dialogue'>“别问他们服不服。打一场该打的仗，他们自己会回答。”</span>"]},
-  {kicker:"第一章 · 接印",title:"和联胜只剩一条街",portrait:"assets/player.webp",body:["第二天早上，祖堂门口的招牌被雨冲得发白。你把龙头印放进外套内袋，开门时，外面只站了四十来个人。","更远的地方，东潮会占着码头，万盛堂占着新城，长风社把手伸进了北站。所有人都在等和联胜自己熄灭。","你看了一眼门外的人，然后把钥匙收进掌心。从今天起，这座城市里的每一块地、每一个人，都得重新回答一个问题——谁说了算。"]}
+  {kicker:"第一章 · 接印",title:"和联胜只剩一条街",portrait:"assets/player.webp",body:["第二天早上，祖堂门口的招牌被雨冲得发白。你把龙头印放进外套内袋，开门时，外面只站了四十来个人。","更远的地方，东潮会占着红磡的码头，万盛堂占着港岛北岸，长风社把手伸进了上水。所有人都在等和联胜自己熄灭。","你看了一眼门外的人，然后把钥匙收进掌心。从今天起，这座城市里的每一块地、每一个人，都得重新回答一个问题——谁说了算。"]}
 ];
 
 const ACTIONS=[
@@ -225,7 +226,7 @@ const ACTIONS=[
     ]},"离间")}},
   {id:"insider",icon:"应",name:"安插内应",desc:"重金在对方地盘里买一个开门的人。",effects:["目标驻防-12","当场查明敌情"],max:1,canRun:s=>s.cash>=14&&attackableTerritories(s).length>0,lockedText:s=>attackableTerritories(s).length?"现金不足":"没有相邻的敌方地盘",run:s=>{
     enqueue({title:"哪扇门需要一个内应",portrait:CHARACTER_DEFS.weixiaolou.portrait,body:"<p>钱到位了，门就会从里面开。内应买通后，那块地的驻防会出现缺口，真实布防也会摆到你桌上。</p>",options:[
-      ...attackableTerritories(s).slice(0,4).map(id=>option(`买通${TERRITORY_DEFS[id].name}的人`,"现金-14万",()=>{if(s.cash<14){toast("现金不足");s.ap++;s.usedActions.insider=0;return}addCash(s,-14);s.territories[id].guard=Math.max(12,s.territories[id].guard-12);s.intel[id]=true;markStyle(s,"li",2);log(s,"good",`${TERRITORY_DEFS[id].name}里有人收了钱。驻防出现缺口，布防图也送了出来。`)})),
+      ...attackableTerritories(s).slice().sort((a,b)=>s.territories[b].guard-s.territories[a].guard).slice(0,6).map(id=>option(`买通${TERRITORY_DEFS[id].name}的人`,"现金-14万",()=>{if(s.cash<14){toast("现金不足");s.ap++;s.usedActions.insider=0;return}addCash(s,-14);s.territories[id].guard=Math.max(12,s.territories[id].guard-12);s.intel[id]=true;markStyle(s,"li",2);log(s,"good",`${TERRITORY_DEFS[id].name}里有人收了钱。驻防出现缺口，布防图也送了出来。`)})),
       option("再想想","不花钱，行动点退回",()=>{s.ap++;s.usedActions.insider=0})
     ]},"内应")}},
   // ---- 破局：钱要能买到「让对面变弱」 ----
@@ -294,9 +295,9 @@ const RANDOM_EVENTS=[
     option("把原话告诉他","谢九进入招募名单；义+2",()=>{s.flags.xieUnlocked=true;markStyle(s,"yi",2);log(s,"story","谢九看完那页旧账，只说了句“知道了”。")},"gold"),
     option("说父债子偿","谢九进入招募名单；威+2",()=>{s.flags.xieUnlocked=true;change(s,"rep",5);markStyle(s,"wei",2)})
   ]},
-  {id:"cash_offer",title:"方景曜送来一张空白支票",portrait:"assets/fang-jingyao.webp",body:"<p>支票上没写数字。方景曜的人说，只要和联胜一年内不进新城，数字可以由你填。<span class='dialogue'>“方先生说，地盘是面子，现金才是里子。”</span></p>",condition:s=>!s.flags.cashOffer&&s.month>=8&&TERRITORY_DEFS.new_city&&s.territories.new_city.owner==="wan",options:s=>[
+  {id:"cash_offer",title:"方景曜送来一张空白支票",portrait:"assets/fang-jingyao.webp",body:"<p>支票上没写数字。方景曜的人说，只要和联胜一年内不进北角，数字可以由你填。<span class='dialogue'>“方先生说，地盘是面子，现金才是里子。”</span></p>",condition:s=>!s.flags.cashOffer&&s.month>=8&&TERRITORY_DEFS.new_city&&s.territories.new_city.owner==="wan",options:s=>[
     option("把支票送回去","声望+8；万盛堂驻防上升",()=>{s.flags.cashOffer=true;change(s,"rep",8);s.territories.new_city.guard+=8;markStyle(s,"wei",2)}),
-    option("填下30万","现金+30万；12个月内攻击新城会掉忠诚",()=>{s.flags.cashOffer=true;s.flags.cashDealUntil=s.month+12;addCash(s,30);markStyle(s,"li",3)},"gold")
+    option("填下30万","现金+30万；12个月内攻击北角会掉忠诚",()=>{s.flags.cashOffer=true;s.flags.cashDealUntil=s.month+12;addCash(s,30);markStyle(s,"li",3)},"gold")
   ]},
   {id:"captain_seat",title:"程野问了一句“我坐哪儿”",portrait:"assets/cheng-ye.webp",body:"<p>祖堂里添了两把椅子，都是新收编的头目坐的。程野拍了拍其中一把，笑着问：<span class='dialogue'>“这儿越来越热闹了。那我以后坐哪儿？”</span></p>",condition:s=>officer(s,"chengye")&&officer(s,"chengye").merit>=18&&!s.flags.chengSeat,options:s=>[
     option("让他管所有新人","程野忠诚+12；普通人才成本-10%",()=>{s.flags.chengSeat=true;s.flags.chengRecruitChief=true;loyalty(s,"chengye",12);markStyle(s,"yi",2)}),
@@ -359,8 +360,8 @@ const RANDOM_EVENTS=[
     option("组织人手救灾","人手暂时占用；人心+10",()=>{change(s,"support",10);change(s,"morale",5);markStyle(s,"yi",2);log(s,"good","和联胜的人在雨里搬了两天沙袋。这种事，街坊记得比谁都牢。")}),
     option("趁乱清点自家","现金+6万；本月敌方不会反扑",()=>{addCash(s,6);aliveAIFactions(s).forEach(f=>s.factions[f].ambition=Math.max(0,(s.factions[f].ambition||0)-5));markStyle(s,"li",1);log(s,"story","风雨里没人打仗。你把仓库和账目理了一遍。")})
   ]},
-  {id:"protection_plea",title:"批发市场的摊主们凑了笔钱",portrait:"assets/ye-rong.webp",body:"<p>他们被长风社的人收了两道费，听说和联胜的地界只收一道，托人来问：能不能罩他们。</p>",condition:s=>!owns(s,"west_market")&&s.territories.west_market&&s.territories.west_market.owner==="long",options:s=>[
-    option("收下这笔钱，应下这件事","现金+8万；长风社警觉",()=>{addCash(s,8);s.factions.long.ambition=(s.factions.long.ambition||0)+6;s.intel.west_market=true;log(s,"warn","钱收了，人也应了。西关的布防图跟着钱一起到的。")},"gold"),
+  {id:"protection_plea",title:"长沙湾批发市场的摊主们凑了笔钱",portrait:"assets/ye-rong.webp",body:"<p>他们被长风社的人收了两道费，听说和联胜的地界只收一道，托人来问：能不能罩他们。</p>",condition:s=>!owns(s,"cheungsha")&&s.territories.cheungsha&&s.territories.cheungsha.owner==="long",options:s=>[
+    option("收下这笔钱，应下这件事","现金+8万；长风社警觉",()=>{addCash(s,8);s.factions.long.ambition=(s.factions.long.ambition||0)+6;s.intel.cheungsha=true;log(s,"warn","钱收了，人也应了。长沙湾的布防图跟着钱一起到的。")},"gold"),
     option("暂时不伸这只手","不结新怨",()=>{log(s,"story","你让摊主们再等等。有些手一旦伸出去，就收不回来了。")})
   ]},
   {id:"loan_shark",title:"有人想借和联胜的名头放贷",portrait:"assets/fang-jingyao.webp",body:"<p>条子都拟好了：他出钱，你出名，利钱三七开。这生意万盛堂做了很多年，很赚，也很脏。</p>",condition:s=>s.creed==="li"&&s.month>=10,options:s=>[
@@ -487,7 +488,7 @@ function createInitialState(name="沈川",creed="yi",difficulty="standard",mutat
   officers[0].name=(name||"沈川").trim().slice(0,8)||"沈川";
   if(creed==="yi"){officers.slice(1,4).forEach(o=>o.loyalty+=5)}
   const territories={};Object.entries(TERRITORY_DEFS).forEach(([id,t])=>territories[id]={owner:t.owner,guard:t.guard,level:1,stability:t.owner==="player"?72:82,settling:0,industry:"",enterpriseLevel:0,building:0,policy:"balanced"});
-  const s={version:VERSION,runId:`fog_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name:officers[0].name,creed:CREEDS[creed]?creed:"yi",difficulty:DIFFICULTIES[difficulty]?difficulty:"standard",month:0,ap:3,tab:"hall",cash:36,crew:42,regroup:0,wounded:0,morale:62,rep:18,support:55,heat:8,training:0,insolvencyMonths:0,style:{yi:creed==="yi"?2:0,wei:creed==="wei"?2:0,li:creed==="li"?2:0},territories,officers,intel:{old_street:true},recruitMarket:[],usedActions:{},log:[],flags:{fatherRetired:false,aqiUnlocked:false,xieUnlocked:false,yeUnlocked:false,coalition:false,debtCrisisQueued:false,emergencyLoanTaken:false,decisiveOffered:0,turncoatWins:0},factions:{east:{defeated:false,ambition:0},wan:{defeated:false,ambition:0},long:{defeated:false,ambition:0}},wins:0,losses:0,battles:0,casualties:0,lastBattleMonth:0,lastAction:null,lastBattle:null,winStreak:0,battleSession:null,ended:false,endingReason:"",
+  const s={version:VERSION,runId:`fog_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name:officers[0].name,creed:CREEDS[creed]?creed:"yi",difficulty:DIFFICULTIES[difficulty]?difficulty:"standard",month:0,ap:3,tab:"hall",cash:36,crew:42,regroup:0,wounded:0,morale:62,rep:18,support:55,heat:8,training:0,insolvencyMonths:0,style:{yi:creed==="yi"?2:0,wei:creed==="wei"?2:0,li:creed==="li"?2:0},territories,officers,intel:{old_street:true},recruitMarket:[],usedActions:{},log:[],flags:{fatherRetired:false,aqiUnlocked:false,xieUnlocked:false,yeUnlocked:false,coalition:false,debtCrisisQueued:false,emergencyLoanTaken:false,decisiveOffered:0,turncoatWins:0,districtHonors:[]},factions:{east:{defeated:false,ambition:0},wan:{defeated:false,ambition:0},long:{defeated:false,ambition:0}},wins:0,losses:0,battles:0,casualties:0,lastBattleMonth:0,lastAction:null,lastBattle:null,winStreak:0,battleSession:null,ended:false,endingReason:"",
   postures:{},governors:{},truces:{},incited:null,schedule:[],crisisCooldowns:{},aiPityUntil:0,
   breach:{},blockade:{},siegeDone:{},siegeWarn:null,eraDecay:1,heatFloor:0,peaceUnified:false,mutators:Array.isArray(mutators)?mutators.filter(id=>MUTATORS[id]).slice(0,2):[]};
   Object.keys(territories).forEach(id=>{if(territories[id].owner!=="player")s.postures[id]=INIT_POSTURES[id]||POSTURE_IDS[Object.keys(TERRITORY_DEFS).indexOf(id)%POSTURE_IDS.length]});
@@ -531,7 +532,7 @@ function hireCommon(s,id){if(s.ap<1)return false;if(ownedOfficers(s).length>=off
 function namedCandidateStatus(s,id){
   if(hasOfficer(s,id))return{state:"owned",text:"已加入"};
   if(id==="aqi")return s.month>=2||s.flags.aqiUnlocked?{state:"ready",text:"老街口等你"}:{state:"locked",text:"第3个月出现"};
-  if(id==="yerong"){const revealed=s.cash>=45||owns(s,"west_market")||s.flags.yeUnlocked;if(!revealed)return{state:"locked",text:"需现金45万或占领西关"};return s.cash>=20?{state:"ready",text:"20万启动商路"}:{state:"unaffordable",text:`还差${Math.ceil(20-s.cash)}万`}}
+  if(id==="yerong"){const revealed=s.cash>=45||owns(s,"west_market")||s.flags.yeUnlocked;if(!revealed)return{state:"locked",text:"需现金45万或占领深水埗"};return s.cash>=20?{state:"ready",text:"20万启动商路"}:{state:"unaffordable",text:`还差${Math.ceil(20-s.cash)}万`}}
   if(id==="xiejiu")return s.flags.xieUnlocked||s.wins>=3?{state:"ready",text:"要先证明你能打胜仗"}:{state:"locked",text:"赢下3场血拼后出现"};
   return{state:"locked",text:"剧情未解锁"};
 }
@@ -580,8 +581,8 @@ function applyEconomy(s){const gross=monthlyGross(s),upkeep=monthlyUpkeep(s),net
 function checkInsolvency(s){
   if(s.ended||s.flags.debtCrisisQueued||!(s.cash<=BANKRUPT_CASH||(s.insolvencyMonths||0)>=2))return false;
   s.flags.debtCrisisQueued=true;
-  const sellable=ownTerritories(s).filter(id=>id!=="old_street").sort((a,b)=>TERRITORY_DEFS[a].income-TERRITORY_DEFS[b].income),options=[];
-  if(sellable.length){const id=sellable[0],price=Math.max(24,TERRITORY_DEFS[id].income*2);options.push(option(`卖掉${TERRITORY_DEFS[id].name}`,`现金+${price}万；失去该地盘`,()=>{s.territories[id].owner="coalition";s.territories[id].guard=24;s.territories[id].stability=56;addCash(s,price);change(s,"rep",-6);change(s,"support",-5);s.insolvencyMonths=0;s.flags.debtCrisisQueued=false;log(s,"bad",`${TERRITORY_DEFS[id].name}被拿去填了账。`)}))}
+  const sellable=ownTerritories(s).filter(id=>id!=="old_street").sort((a,b)=>(s.territories[a].enterpriseLevel||0)-(s.territories[b].enterpriseLevel||0)||(s.territories[a].invested||0)-(s.territories[b].invested||0)||TERRITORY_DEFS[a].income-TERRITORY_DEFS[b].income),options=[];
+  if(sellable.length){const id=sellable[0],price=Math.max(24,TERRITORY_DEFS[id].income*2);const shop=INDUSTRIES[s.territories[id].industry];options.push(option(`卖掉${TERRITORY_DEFS[id].name}`,`现金+${price}万；失去该地盘${shop?`，连同${s.territories[id].enterpriseLevel}级${shop.name}（已投入${s.territories[id].invested||0}万）`:""}`,()=>{s.territories[id].owner="coalition";s.territories[id].guard=24;s.territories[id].stability=56;addCash(s,price);change(s,"rep",-6);change(s,"support",-5);s.insolvencyMonths=0;s.flags.debtCrisisQueued=false;log(s,"bad",`${TERRITORY_DEFS[id].name}被拿去填了账。`)}))}
   if(!s.flags.emergencyLoanTaken)options.push(option("借一次救命钱","现金+35万；忠诚和人心下降",()=>{addCash(s,35);s.flags.emergencyLoanTaken=true;s.flags.debtCrisisQueued=false;s.insolvencyMonths=0;change(s,"support",-8);change(s,"heat",7);ownedOfficers(s).filter(o=>o.id!=="player").forEach(o=>o.loyalty=clamp(o.loyalty-5));markStyle(s,"li",2);log(s,"warn","和联胜借进了一笔只够救一次命的钱。")},"gold"));
   options.push(option("承认资金链断裂","进入破产结局",()=>endGame(s,"bankrupt"),"danger"));
   enqueue({title:"账房已经付不出下个月的钱",portrait:CHARACTER_DEFS.sumanqing.portrait,body:`<p>苏曼青把账簿推到你面前。现金已经跌到 <b>${Math.round(s.cash)} 万</b>，连续赤字 ${s.insolvencyMonths||0} 个月。</p><p><span class='dialogue'>“地盘还能抢回来。账一旦断了，人会先散。”</span></p>`,options},"资金链危机");
@@ -1235,6 +1236,8 @@ function normalizeState(s){if(!s||typeof s!=="object"||s.version!==VERSION||type
   // 破局机制新增的字段：老存档里没有，缺了会让围困、失序与加时结算算出 NaN 或直接抛错。
   s.flags.decisiveOffered=Number.isFinite(s.flags.decisiveOffered)?Math.max(0,s.flags.decisiveOffered):0;
   s.flags.turncoatWins=Number.isFinite(s.flags.turncoatWins)?Math.max(0,s.flags.turncoatWins):0;
+  // 新档开局就带空表；没有这张表的是贺礼上线前的旧档，已经整区占着的不再补发。
+  if(!Array.isArray(s.flags.districtHonors))s.flags.districtHonors=Object.entries(DISTRICTS).filter(([,d])=>d.territories.every(id=>s.territories[id]?.owner==="player")).map(([name])=>name);
   ["breach","blockade","siegeDone"].forEach(k=>{if(!s[k]||typeof s[k]!=="object")s[k]={};Object.keys(s[k]).forEach(id=>{if(!TERRITORY_DEFS[id]&&!FACTIONS[id]||!Number.isFinite(s[k][id]))delete s[k][id]})});
   if(!s.siegeWarn||typeof s.siegeWarn!=="object"||!Number.isFinite(s.siegeWarn.month)||!AI_FACTIONS.includes(s.siegeWarn.faction))s.siegeWarn=null;
   s.eraDecay=Number.isFinite(s.eraDecay)&&s.eraDecay>0?s.eraDecay:1;
@@ -1397,7 +1400,7 @@ function renderChronicle(){const panel=$("panel");panel.innerHTML=`<section clas
   $("chronSaveBtn")?.addEventListener("click",()=>{if(saveGame())toast("进度已保存在本机")});
   $("chronRestartBtn")?.addEventListener("click",()=>{if(confirm("删除当前存档并重新开始？")){deleteSave();S=null;showMenu()}});}
 
-function showEnding(s){$("game")?.classList.add("hidden");$("ending").classList.remove("hidden");const title=endingTitle(s),victory=s.endingReason==="unified",settled=["halfharbor","warlord"].includes(s.endingReason),aqi=officer(s,"aqi"),styleKey=Object.entries(s.style).sort((a,b)=>b[1]-a[1])[0][0],styleName=CREEDS[styleKey].name;let line;if(s.endingReason==="bankrupt")line="账房最后一次合上账簿时，祖堂里还亮着灯，但已经没人等着领下个月的钱。地盘没有一夜丢光，和联胜却先从人心里散了。";else if(s.endingReason==="crushed")line="他们是从三个方向同时进来的。天亮时，老街还是那条老街，祖堂主位上坐着的却换了人。父亲留下的那本蓝色账簿，最后没有人捡起来。";else if(s.endingReason==="halfharbor")line="没有人正式宣布过什么。只是从某一年起，雾港一半的码头、货车和夜市账本上都写着同一个名字，而另一半学会了绕开它。这不是一统，是一种谁都拆不动的平衡。";else if(s.endingReason==="warlord")line="你守住了一片说得清边界的地方。出了这几条街，雾港还是别人的雾港——但在这几条街里，没有人再提沈振海的名字，他们提的是你的。";else if(s.endingReason==="faded")line="最后清点的时候，账簿上只剩几行。人陆续走了，招牌换了颜色，老街还在，只是不再有人为它开会。和联胜没有被谁一刀砍死，它是被这座城慢慢挤了出去。";else if(!victory)line="老街的招牌被摘下时，祖堂里没有人说话。父亲留下的那本蓝色账簿，终于没有人再往后翻。";else if(s.peaceUnified)line="最后一张桌上没有摔杯子。对方把印放下、把人交出来，第二天两家的伙计一起去码头点货。雾港统一的那天，医馆里一个新伤号都没有。";else if(styleKey==="yi")line="中环的招牌升起时，从敌对社团过来的人也站在人群里。他们服的不是沈振海的姓，是你这些年没赖掉的账。";else if(styleKey==="wei")line="最后一块招牌落地后，雾港安静了很久。没人怀疑你说的话，也没人敢问那些空着的椅子原来属于谁。";else line="雾港的货车、码头和新城账本上，最后都出现了和联胜的名字。父亲留下的社团被你变成了一台不会停的机器。";const aqiLine=aqi?`<p>阿七站在人群最后面。这些年他学会的是“${styleName}”。有一天这枚龙头印再交到下一个人手上时，他大概会用同一种方式坐下。</p>`:"";const rank=victory?recordLeaderboard(s):null;
+function showEnding(s){$("game")?.classList.add("hidden");$("ending").classList.remove("hidden");const title=endingTitle(s),victory=s.endingReason==="unified",settled=["halfharbor","warlord"].includes(s.endingReason),aqi=officer(s,"aqi"),styleKey=Object.entries(s.style).sort((a,b)=>b[1]-a[1])[0][0],styleName=CREEDS[styleKey].name;let line;if(s.endingReason==="bankrupt")line="账房最后一次合上账簿时，祖堂里还亮着灯，但已经没人等着领下个月的钱。地盘没有一夜丢光，和联胜却先从人心里散了。";else if(s.endingReason==="crushed")line="他们是从三个方向同时进来的。天亮时，老街还是那条老街，祖堂主位上坐着的却换了人。父亲留下的那本蓝色账簿，最后没有人捡起来。";else if(s.endingReason==="halfharbor")line="没有人正式宣布过什么。只是从某一年起，雾港一半的码头、货车和夜市账本上都写着同一个名字，而另一半学会了绕开它。这不是一统，是一种谁都拆不动的平衡。";else if(s.endingReason==="warlord")line="你守住了一片说得清边界的地方。出了这几条街，雾港还是别人的雾港——但在这几条街里，没有人再提沈振海的名字，他们提的是你的。";else if(s.endingReason==="faded")line="最后清点的时候，账簿上只剩几行。人陆续走了，招牌换了颜色，老街还在，只是不再有人为它开会。和联胜没有被谁一刀砍死，它是被这座城慢慢挤了出去。";else if(!victory)line="老街的招牌被摘下时，祖堂里没有人说话。父亲留下的那本蓝色账簿，终于没有人再往后翻。";else if(s.peaceUnified)line="最后一张桌上没有摔杯子。对方把印放下、把人交出来，第二天两家的伙计一起去码头点货。雾港统一的那天，医馆里一个新伤号都没有。";else if(styleKey==="yi")line="中环的招牌升起时，从敌对社团过来的人也站在人群里。他们服的不是沈振海的姓，是你这些年没赖掉的账。";else if(styleKey==="wei")line="最后一块招牌落地后，雾港安静了很久。没人怀疑你说的话，也没人敢问那些空着的椅子原来属于谁。";else line="雾港的货车、码头和铺面账本上，最后都出现了和联胜的名字。父亲留下的社团被你变成了一台不会停的机器。";const aqiLine=aqi?`<p>阿七站在人群最后面。这些年他学会的是“${styleName}”。有一天这枚龙头印再交到下一个人手上时，他大概会用同一种方式坐下。</p>`:"";const rank=victory?recordLeaderboard(s):null;
   const rankLine=victory&&rank?`<p class="lb-rank">一统用时 <b>${s.month+1}</b> 个月 · 名录第 <b>${rank}</b> 位${rank===1?"——雾港最快的话事人":""}</p>`:"";
   $("endingBody").innerHTML=`<span class="eyebrow">${victory?(s.peaceUnified?"结账 · 一张桌上谈完":"结账 · 一统雾港"):settled?"结账 · 各安其位":"结账 · 父业到此"}</span><h1>${title}</h1><div class="story-body"><p>${line}</p>${aqiLine}</div>${rankLine}<div class="ending-stats"><div><b>${s.month+1}</b><span>经过月数</span></div><div><b>${ownTerritories(s).length}</b><span>地盘</span></div><div><b>${s.wins}</b><span>胜场</span></div><div><b>${ownedOfficers(s).length}</b><span>最终头目</span></div></div><button id="endingRestart" class="primary-btn">重新接印</button><button id="endingLbBtn" class="secondary-btn">查看排行榜</button>`;$("endingRestart").addEventListener("click",()=>{if(confirm("删除当前存档并重新开始？")){deleteSave();S=null;showMenu()}});$("endingLbBtn").addEventListener("click",()=>showLeaderboard(s.runId))}
 

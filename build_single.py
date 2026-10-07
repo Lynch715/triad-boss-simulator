@@ -55,6 +55,13 @@ def main() -> None:
     # 版本号每次改版都会变，用正则匹配，免得忘了同步这里导致脚本没被内联。
     html = re.sub(r'<script src="app\.js(?:\?v=\d+)?"></script>', lambda _: f"{loader}\n<script>\n{js}\n</script>", html)
 
+    # 单文件版离开仓库也要有图标：小图标和 iOS 主屏图标内嵌，favicon.ico 和 manifest 依赖目录结构，单文件里去掉。
+    html = re.sub(r'\s*<link rel="icon" href="favicon\.ico"[^>]*>', "", html)
+    html = re.sub(r'\s*<link rel="manifest"[^>]*>', "", html)
+    for ref in ("icon/icon-32.png", "icon/icon-180.png"):
+        if (ROOT / ref).exists():
+            html = html.replace(f'href="{ref}"', f'href="{data_uri(ROOT / ref)}"')
+
     # 只看属性，别看正文：注释里提到文件名不算外部依赖。
     external = sorted(set(re.findall(r'(?:href|src)="[^"]*\.(?:css|js)(?:\?[^"]*)?"', html)))
     if external:

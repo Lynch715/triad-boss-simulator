@@ -1,0 +1,16 @@
+{
+  "name": "模拟社团老大 · 雾港风云",
+  "short_name": "社团老大",
+  "description": "接班父亲的和联胜，招人、血拼、吞并势力，一统架空港城雾港。",
+  "lang": "zh-CN",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#17110c",
+  "theme_color": "#17110c",
+  "icons": [
+    {"src": "icon/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
