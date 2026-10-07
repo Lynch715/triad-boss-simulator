@@ -134,3 +134,15 @@
 .siege-tag{margin-left:6px;color:var(--gold);background:rgba(214,179,105,.14);border:1px solid rgba(214,179,105,.4)}
 .map-legend .disorder-tag{margin-left:5px;font-size:10px;color:var(--red);background:rgba(201,75,75,.16);border:1px solid rgba(201,75,75,.4)}
 .stat-chips .drain{color:var(--gold);font-weight:700}
+
+/* 十八区地图与产业账本 */
+.city-map-heading h2{font-family:serif;font-size:28px;margin:9px 0}.city-map-heading p,.map-caption{font-size:13px;line-height:1.7;color:var(--muted)}
+.city-summary{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0;color:var(--gold);font-size:13px}
+.fog-map{min-width:760px;max-height:740px}.map-land{fill:#203b35;stroke:#547061;stroke-width:2}.map-region-label{fill:#95b8a4;font:24px serif;letter-spacing:8px;opacity:.7}.map-sea-label{fill:#6f9fae;font:17px serif;letter-spacing:7px}.map-edge{stroke:#9aab95;stroke-opacity:.38;stroke-dasharray:5 5}.map-node{cursor:pointer}.map-node:focus{outline:none}.map-node:focus circle{stroke:#fff;stroke-width:5}.map-name{paint-order:stroke;stroke:#172b29;stroke-width:4px;stroke-linejoin:round;font-size:16px}.map-sub{paint-order:stroke;stroke:#172b29;stroke-width:3px}
+.map-filters{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.map-filters button{padding:10px 16px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:#111c1c;cursor:pointer}.map-filters button.active{background:#bca46b;color:#111a18;border-color:#d9c38d}.map-filters.secondary button{font-size:12px;padding:8px 12px}.enterprise-summary{display:grid;gap:5px;padding:12px;margin:10px 0;background:rgba(111,156,135,.1);border-left:2px solid #729d88;font-size:12px}.enterprise-summary span{color:var(--muted);line-height:1.6}.territory-actions button{min-height:44px}.map-caption{margin-top:-4px}
+@media(max-width:760px){.city-map-heading h2{font-size:24px}.fog-map-wrap{max-height:480px;overflow:auto}.fog-map{max-height:none}.city-summary{gap:10px;font-size:12px}.map-filters button{flex:1;padding:8px}.enterprise-summary{padding:9px}}
+.territory-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.territory-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.territory-actions [data-enterprise]{grid-column:1/-1}
+@media(max-width:760px){.territory-grid{grid-template-columns:1fr}}
+@media(max-width:390px){.crew-breakdown{white-space:normal;font-size:10px;overflow-wrap:anywhere}.top-resources>div{min-width:0}}

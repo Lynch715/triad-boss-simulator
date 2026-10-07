@@ -1,0 +1,10 @@
+莽夫·标准      通关 24/24  中位 40月  仗 40  丢地 0
+莽夫·死战      通关 12/24  中位 103月  仗 51  丢地 17
+稳健·标准      通关 13/24  中位 133月  仗 69  丢地 21
+稳健·围困      通关 18/24  中位 123月  仗 53  丢地 14
+躺平·标准   60月后剩余地盘中位 0  被灭 22/24
+balance tests passed
+必然终结：全部 96 局均在 180 月内结束
+破局机制 balance tests passed
+(node:33208) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)

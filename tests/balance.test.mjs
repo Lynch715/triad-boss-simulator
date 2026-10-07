@@ -16,7 +16,7 @@ const game=require("../app.js");
 
 function seeded(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
 const TOTAL=Object.keys(game.TERRITORY_DEFS).length; // 14块地：一统需要13场胜仗
-const MONTH_CAP=120;                                  // 60 个月主战役 + 加时，超过即判定为打不完
+const MONTH_CAP=game.FINAL_MONTH+1;                                  // 60 个月主战役 + 加时，超过即判定为打不完
 const RUNS=24;
 const med=a=>a.length?a.slice().sort((x,y)=>x-y)[Math.floor(a.length/2)]:null;
 
@@ -62,7 +62,7 @@ function play(seed,difficulty,bar,useSupport,useSiege=false){
     if(sig===prev)frozen++;else frozen=0;
     prev=sig;frozenMax=Math.max(frozenMax,frozen);
   }
-  return{months:s.month,ended:s.ended,unified:game.ownTerritories(s).length===TOTAL,battles,lostTerr,frozenMax,
+  return{seed,owned:game.ownTerritories(s).length,reason:s.endingReason,months:s.month,ended:s.ended,unified:game.ownTerritories(s).length===TOTAL,battles,lostTerr,frozenMax,
     poolsOk:s.crew>=0&&s.regroup>=0&&s.wounded>=0};
 }
 
@@ -125,13 +125,14 @@ console.log("balance tests passed");
 for(const [name,set] of [["稳健",steady],["稳健·围困",besieger],["莽夫",rush],["莽夫·死战",rushBrutal]]){
   const stuck=set.filter(r=>!r.ended&&!r.unified);
   assert.equal(stuck.length,0,`${name} 有 ${stuck.length} 局跑到 ${MONTH_CAP} 月仍未终结，后期又冻住了`);
-  const late=set.filter(r=>r.months>100);
+  const late=set.filter(r=>r.months>game.FINAL_MONTH);
   assert.equal(late.length,0,`${name} 有 ${late.length} 局拖过 100 月，强制结算没生效`);
 }
 
 // ⑨ 僵局哨兵：地盘数连续 24 个月完全不变即判定为冻结。
 for(const [name,set] of [["稳健",steady],["稳健·围困",besieger],["莽夫·死战",rushBrutal]]){
   const worst=Math.max(...set.map(r=>r.frozenMax));
+  if(worst>=24)console.log(name,set.filter(r=>r.frozenMax>=24));
   assert.ok(worst<24,`${name} 出现连续 ${worst} 个月地盘数纹丝不动的冻结局面`);
 }
 

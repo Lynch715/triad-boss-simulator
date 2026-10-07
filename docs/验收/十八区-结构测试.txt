@@ -1,0 +1,7 @@
+structure and core-loop tests passed
+event pool ok: 29 events, 7 chain steps
+leaderboard tests ok
+action copy budget ok
+破局机制 tests ok
+(node:33271) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)

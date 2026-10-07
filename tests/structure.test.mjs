@@ -7,8 +7,8 @@ const game=require("../app.js");
 const s=game.createInitialState("沈测试","yi","standard");
 assert.equal(s.name,"沈测试");
 assert.equal(game.ownTerritories(s).length,1);
-assert.equal(Object.keys(s.territories).length,14,"全图14块地：老街+散户带3+三家各3+中央港区");
-assert.deepEqual(new Set(game.attackableTerritories(s)),new Set(["clocktower","fogvillage","whitesand","south_dock"]),"开局可攻：三块散户地+相邻的南港码头");
+assert.equal(Object.keys(s.territories).length,36,"香港18区各两个地段");
+assert.deepEqual(new Set(game.attackableTerritories(s)),new Set(["clocktower","west_market","kowlooncity"]),"开局三条九龙扩张路线");
 assert.equal(s.ap,3);
 assert.equal(s.crew,42);
 assert.equal(s.regroup,0,"开局没有整补中的人");
@@ -43,9 +43,9 @@ assert.equal(debt.flags.debtCrisisQueued,true);
 assert.equal(game.checkInsolvency(debt),false,"同一场资金危机不能重复入队");
 
 const overtime=game.createInitialState("沈加时","wei","standard");
-overtime.month=59;
-assert.equal(game.monthDisplay(overtime),"60 / 60");
-overtime.month=60;
+overtime.month=game.MAX_MONTHS-1;
+assert.equal(game.monthDisplay(overtime),`${game.MAX_MONTHS} / ${game.MAX_MONTHS}`);
+overtime.month=game.MAX_MONTHS;
 assert.equal(game.monthDisplay(overtime),"加时 1月");
 
 const yeState=game.createInitialState("沈商路","li","standard");
@@ -61,6 +61,10 @@ delete oldSave.flags.debtCrisisQueued;
 assert.equal(game.normalizeState(oldSave).insolvencyMonths,0);
 assert.equal(oldSave.flags.debtCrisisQueued,false);
 assert.equal(game.normalizeState({version:1,name:"坏档"}),null);
+
+// 战斗单元夹具：让香港仔与老街相邻，复用三段式战斗的隔离测试。真实地图连通性在 city-economy.test.mjs 验证。
+game.TERRITORY_DEFS.old_street.neighbors.push("south_dock");
+game.TERRITORY_DEFS.south_dock.neighbors.push("old_street");
 
 const shortCrew=game.createInitialState("沈缺人","wei","standard");
 shortCrew.crew=9;
@@ -847,7 +851,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 // ---- 破口：打过一场，那扇门就得漏四个月 ----
 {
   const s=game.createInitialState("沈破口","wei","standard");
-  s.crew=200;s.morale=90;const id="whitesand";
+  s.crew=200;s.morale=90;const id="clocktower";
   s.territories[id].guard=120;
   game.resolveBattle(s,{targetId:id,leaderIds:["zhaokui"],troops:12,tactic:"assault"},()=>0.99);
   assert.ok(!game.ownTerritories(s).includes(id),"12人打120驻防不该赢——这条夹具依赖它输");
@@ -865,10 +869,10 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 // 打赢了就没有破口可言——那块地已经是自己的
 {
   const s=game.createInitialState("沈拿下","wei","standard");
-  s.crew=300;s.morale=95;s.territories.whitesand.guard=8;
-  game.resolveBattle(s,{targetId:"whitesand",leaderIds:["zhaokui","chengye"],troops:200,tactic:"assault"},()=>0.99);
-  assert.ok(game.ownTerritories(s).includes("whitesand"),"这一仗该赢");
-  assert.ok(!("whitesand" in s.breach),"打下来的地不留破口");
+  s.crew=300;s.morale=95;s.territories.clocktower.guard=8;
+  game.resolveBattle(s,{targetId:"clocktower",leaderIds:["zhaokui","chengye"],troops:200,tactic:"assault"},()=>0.99);
+  assert.ok(game.ownTerritories(s).includes("clocktower"),"这一仗该赢");
+  assert.ok(!("clocktower" in s.breach),"打下来的地不留破口");
 }
 
 // ---- 封锁：后期现金终于有地方花 ----
@@ -922,12 +926,12 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   assert.equal(game.factionDisorder(s,"east"),0,"三块地不失序");
   const capBefore=game.enemyCap(s,"south_dock");
   ["clocktower","fogvillage","whitesand"].forEach(id=>{s.territories[id].owner="east"});
-  assert.equal(game.factionDisorder(s,"east"),1,"六块地：disorder = 6-5");
-  assert.equal(game.enemyCap(s,"south_dock"),90+6*30-22,"上限 = 90+n*30 - disorder*22");
+  assert.equal(game.factionDisorder(s,"east"),3,"八块地：disorder = 8-5");
+  assert.equal(game.enemyCap(s,"south_dock"),90+8*18-3*14,"上限 = 90+n*30 - disorder*22");
   assert.ok(game.enemyCap(s,"south_dock")>capBefore,"打折之后仍然比三块地时厚：巨无霸还是巨无霸");
   ["mall","west_market","north_yard"].forEach(id=>{s.territories[id].owner="east"});
-  assert.equal(game.factionDisorder(s,"east"),4);
-  assert.equal(game.enemyCap(s,"south_dock"),90+9*30-4*22,"九块地：360 打到 272，被压回玩家天花板的量级");
+  assert.equal(game.factionDisorder(s,"east"),6);
+  assert.equal(game.enemyCap(s,"south_dock"),90+11*18-6*14,"九块地：360 打到 272，被压回玩家天花板的量级");
   // 街面生乱：抢来的地才会闹，老巢不会
   const t=s.territories.whitesand;t.guard=140;
   const lines=game.disorderTick(s,seq([0]));
@@ -942,9 +946,9 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   // 起家地不参与
   const s3=game.createInitialState("沈老巢","wei","standard");
   ["clocktower","fogvillage","whitesand"].forEach(id=>{s3.territories[id].owner="east"});
-  const homeGuards=["south_dock","shipyard","fishmarket"].map(id=>s3.territories[id].guard);
+  const homeGuards=["south_dock","shipyard","kwuntong"].map(id=>s3.territories[id].guard);
   for(let i=0;i<20;i++)game.disorderTick(s3,seq([0]));
-  assert.deepEqual(["south_dock","shipyard","fishmarket"].map(id=>s3.territories[id].guard),homeGuards,"老巢的人心不会说散就散");
+  assert.deepEqual(["south_dock","shipyard","kwuntong"].map(id=>s3.territories[id].guard),homeGuards,"老巢的人心不会说散就散");
   // 策反对失序势力打七折
   const s4=game.createInitialState("沈折扣","li","standard");
   const full=game.turncoatCost(s4,"south_dock");
@@ -1028,7 +1032,7 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   const s=game.createInitialState("沈守城","wei","standard");
   s.month=30;
   assert.equal(game.siegeCandidate(s),undefined,"三块地的一家不会来摘招牌");
-  ["clocktower","fogvillage","whitesand","mall","west_market"].forEach(id=>{s.territories[id].owner="east"});
+  Object.keys(s.territories).filter(id=>id!=="old_street").slice(0,22).forEach(id=>{s.territories[id].owner="east"});
   assert.equal(game.siegeCandidate(s),"east","八块地：该来了");
   assert.equal(game.maybeSiegeWarn(s),"east");
   assert.equal(s.siegeWarn.month,s.month+1,"警讯必须早一个月到——那一个月是留给玩家整备的");
@@ -1038,11 +1042,11 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   assert.equal(game.maybeSiegeWarn(early),null,"第30个月之前不触发守城战");
   // 守得住：对方全境驻防大损，最远一块当场反水
   const hold=JSON.parse(JSON.stringify(s));hold.month++;hold.crew=900;hold.morale=95;hold.support=80;
-  const guards=game.factionTerritories(hold,"east").map(id=>hold.territories[id].guard);
+  const guards=Object.fromEntries(game.factionTerritories(hold,"east").map(id=>[id,hold.territories[id].guard]));
   const r1=game.resolveSiege(hold,()=>.5);
   assert.equal(r1.held,true);
   assert.equal(hold.ended,false);
-  assert.ok(game.factionTerritories(hold,"east").map(id=>hold.territories[id].guard).every((g,i)=>g<guards[i]),"守住了：对方全境驻防×0.6");
+  assert.ok(game.factionTerritories(hold,"east").every(id=>hold.territories[id].guard<guards[id]),"守住了：对方全境驻防×0.6");
   assert.ok(Object.values(hold.territories).some(t=>t.owner==="free"),"最远端一块当场反水成散户");
   assert.equal(hold.siegeDone.east,hold.month,"每家只来一次");
   // 惨胜：门顶住了，家底没了
@@ -1066,19 +1070,20 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
 // ---- 加时的代价与最后一页 ----
 {
   const s=game.createInitialState("沈加时","li","standard");
-  s.month=64;assert.equal(game.eraTick(s),false,"主战役期内不收加时税");
-  s.month=66;const gross=game.monthlyGross(s);
+  s.month=game.MAX_MONTHS;assert.equal(game.eraTick(s),false,"主战役期内不收加时税");
+  s.month=game.MAX_MONTHS+6;const gross=game.monthlyGross(s);
   assert.equal(game.eraTick(s),true);
   assert.equal(s.eraDecay,0.95);
   assert.equal(s.heatFloor,8,"外部压力的地板抬起来，低调也压不回去了");
   assert.ok(game.monthlyGross(s)<gross,"加时越久，账面越紧");
-  s.month=72;game.eraTick(s);
+  s.month=game.MAX_MONTHS+12;game.eraTick(s);
   assert.equal(s.eraDecay,0.903,"每六个月累乘一次");
   assert.equal(s.heatFloor,16);
   // 96 月按局面结算三档
-  const bands=[[10,"halfharbor"],[7,"warlord"],[3,"faded"]];
+  const bands=[[26,"halfharbor"],[15,"warlord"],[3,"faded"]];
   for(const [n,reason] of bands){
     const g=game.createInitialState("沈结算","yi","standard");g.month=game.FINAL_MONTH;
+    Object.values(g.territories).forEach(t=>t.owner="free");
     Object.keys(g.territories).slice(0,n).forEach(id=>{g.territories[id].owner="player"});
     assert.equal(game.ownTerritories(g).length,n);
     assert.equal(game.forcedSettlement(g),true);
