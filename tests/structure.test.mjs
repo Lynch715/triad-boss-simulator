@@ -1057,18 +1057,16 @@ function seq(vals){let i=0;return()=>vals[Math.min(i++,vals.length-1)]}
   assert.equal(rout.endingReason,"crushed");
 }
 
-// ---- 第十年起风向变：没有期限，但越拖越难 ----
+// ---- 第十年起风向变：只抬压力底线，不再打折收入 ----
 {
   const s=game.createInitialState("沈加时","li","standard");
-  s.month=game.MAX_MONTHS;assert.equal(game.eraTick(s),false,"主战役期内不收加时税");
+  s.month=game.MAX_MONTHS;assert.equal(game.eraTick(s),false,"第十年之前不变");
   s.month=game.MAX_MONTHS+6;const gross=game.monthlyGross(s);
   assert.equal(game.eraTick(s),true);
-  assert.equal(s.eraDecay,0.95);
   assert.equal(s.heatFloor,8,"外部压力的地板抬起来，低调也压不回去了");
-  assert.ok(game.monthlyGross(s)<gross,"加时越久，账面越紧");
-  s.month=game.MAX_MONTHS+12;game.eraTick(s);
-  assert.equal(s.eraDecay,0.903,"每六个月累乘一次");
-  assert.equal(s.heatFloor,16);
+  assert.equal(game.monthlyGross(s),gross,"收入不再随年份打折");
+  for(let k=2;k<20;k++){s.month=game.MAX_MONTHS+6*k;game.eraTick(s)}
+  assert.equal(s.heatFloor,60,"压力底线最多抬到 60");
   assert.equal(game.forcedSettlement,undefined,"不再有强制结算");
 }
 

@@ -233,4 +233,74 @@ const P=game.PEOPLE;
   assert.equal(game.monthDisplay(s),"第202月");
 }
 
-console.log("scale / headquarters / officer level / pacing tests passed");
+// ---- 心结与离开 ----
+{
+  const s=game.createInitialState("沈心结","wei","standard");
+  const zk=s.officers.find(o=>o.id==="zhaokui");
+  game.hurt(s,zk,-3,2,"月底亏空，分红没发足");game.hurt(s,zk,-3,2,"月底亏空，分红没发足");game.hurt(s,zk,0,2,"跟着打了败仗");
+  assert.equal(zk.grudges.length,2,"同一件事合并计数");
+  assert.equal(game.grudgeText(zk),"跟着打了败仗；月底亏空，分红没发足（2次）","最近的排前面");
+  zk.loyalty=40;zk.resentment=75;
+  assert.ok(game.atRisk(zk));
+  const rep=game.monthlyReportModal(s,{gross:1,upkeep:1,net:0},{back:0,healed:0},[],null,[]);
+  assert.ok(rep.body.includes("赵魁心里有疙瘩")&&rep.body.includes("分红没发足"),"月报点名预警并写明原因");
+  game.officerTension(s,()=>0);
+  assert.equal(zk.side,"defected");
+  assert.ok(s.log[0].text.includes("心结：跟着打了败仗"),"记事写明原因");
+  // 承诺落空也会记账
+  const p=game.createInitialState("沈食言","wei","standard");p.flags.warPromise=3;p.month=5;p.lastBattleMonth=0;game.checkPromises(p);
+  assert.ok(game.grudgeText(p.officers.find(o=>o.id==="zhaokui")).includes("答应他开战，没兑现"));
+}
+
+// ---- 收入：不再随年份打折；未稳七成五；地盘费立稳后才收；投奔到七成五 ----
+{
+  const s=game.createInitialState("沈账本","li","standard");
+  s.territories.clocktower.owner="player";s.territories.clocktower.settling=3;
+  const g1=game.monthlyGross(s),p1=game.upkeepParts(s);
+  assert.equal(p1.land,0,"未稳的地不收地盘费");
+  s.territories.clocktower.settling=0;const g2=game.monthlyGross(s),p2=game.upkeepParts(s);
+  assert.equal(p2.land,2);
+  assert.ok(Math.abs(g1/g2-((8+game.TERRITORY_DEFS.clocktower.income*.75)/(8+game.TERRITORY_DEFS.clocktower.income)))<.05,"未稳的地收入七成五");
+  assert.equal(game.monthlyUpkeep(s),Math.round((p2.crew+p2.officers+p2.land+p2.biz)*10)/10,"支出＝四项之和");
+  const f=game.createInitialState("沈投奔上限","yi","standard");f.crew=Math.floor(game.crewCap(f)*.75)-5;
+  assert.equal(game.monthlyInflow(f),5,"人手到上限七成五就不再有人投奔");
+  const old=JSON.parse(JSON.stringify(game.createInitialState("沈旧折扣","yi","standard")));old.eraDecay=.6;old.heatFloor=90;
+  const n=game.normalizeState(old);assert.equal(n.eraDecay,1);assert.equal(n.heatFloor,60);
+}
+
+// ---- 招募市场：年纪、来历、等级跟年份走、名字不重复 ----
+{
+  const s=game.createInitialState("沈市场","yi","standard");
+  const early=Array.from({length:60},(_,i)=>game.makeCommonCandidate(s,i,seeded(100+i)));
+  s.month=120;const late=Array.from({length:60},(_,i)=>game.makeCommonCandidate(s,i,seeded(200+i)));
+  const avg=(a,f)=>a.reduce((x,o)=>x+f(o),0)/a.length;
+  assert.ok(avg(late,o=>o.age)>avg(early,o=>o.age)+8,`后期来的人年纪更大（${avg(early,o=>o.age).toFixed(1)} → ${avg(late,o=>o.age).toFixed(1)}）`);
+  assert.ok(avg(late,o=>o.lv)>=5&&avg(early,o=>o.lv)<1.5,"等级跟着年份走");
+  assert.ok(late.every(o=>o.origin&&o.traitText&&Number.isFinite(o.age)));
+  assert.ok(late.filter(o=>o.lv>1).every(o=>o.cost>10),"等级高的要价也高");
+  // 刷两百个月市场也不会出现兜底名或重名
+  const r=game.createInitialState("沈刷新","yi","standard");const rng=seeded(7);
+  for(let m=0;m<200;m++){r.month=m;game.refreshRecruitMarket(r,rng);const names=r.recruitMarket.map(o=>o.name);
+    assert.equal(new Set([...names,...r.officers.map(o=>o.name)]).size,names.length+r.officers.length,"不重名");
+    assert.ok(names.every(n=>!n.includes("雾港青年")));
+    if(m%10===0){const c=r.recruitMarket[0];r.cash=999;r.ap=3;game.hireCommon(r,c.id)}}
+  assert.equal(game.officerAge({age:30,ageMonth:0},{month:25}),32,"年纪会跟着长");
+}
+
+// ---- 灭门后的旧部进招募市场 ----
+{
+  const s=game.createInitialState("沈旧部","wei","standard");
+  game.factionTerritories(s,"long").forEach(id=>{s.territories[id].owner="player"});
+  game.checkFactionDefeat(s,"long",null);
+  const rem=s.officers.filter(o=>o.side==="remnant");
+  assert.ok(rem.length>=3&&rem.every(o=>o.remnantOf==="long"),"长风社剩下的人成了旧部");
+  assert.equal(s.officers.find(o=>o.id==="guchangfeng").side,"defeated","话事人不算旧部");
+  let seen=false;const rng=seeded(3);for(let m=0;m<12&&!seen;m++){game.refreshRecruitMarket(s,rng);seen=s.recruitMarket.some(o=>o.remnantOf==="long")}
+  assert.ok(seen,"一年之内旧部会出现在招募市场");
+  const c=s.recruitMarket.find(o=>o.remnantOf);s.cash=999;s.ap=3;assert.ok(game.hireCommon(s,c.id));
+  assert.equal(game.officer?game.officer(s,c.id)?.side:s.officers.find(o=>o.id===c.id).side,"player","招得进来");
+  game.refreshRecruitMarket(s,rng);
+  assert.equal(s.officers.filter(o=>o.side==="remnant").length+s.recruitMarket.filter(o=>o.remnantOf).length,rem.length-1,"没招走的旧部刷新后还在");
+}
+
+console.log("scale / headquarters / officer level / pacing / roster tests passed");
